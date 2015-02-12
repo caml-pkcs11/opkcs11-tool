@@ -251,6 +251,7 @@ let match_string_to_keygenpair_mech_value in_string =
 | "CKM_X9_42_DH_KEY_PAIR_GEN" -> Pkcs11.cKM_X9_42_DH_KEY_PAIR_GEN
 | "CKM_KEA_KEY_PAIR_GEN" -> Pkcs11.cKM_KEA_KEY_PAIR_GEN
 | "CKM_ECDSA_KEY_PAIR_GEN" -> Pkcs11.cKM_ECDSA_KEY_PAIR_GEN
+| "CKM_EC_KEY_PAIR_GEN" -> Pkcs11.cKM_EC_KEY_PAIR_GEN
 | "CKM_VENDOR_DEFINED" -> Pkcs11.cKM_VENDOR_DEFINED
 | _ -> let s = Printf.sprintf "Unknown PKCS#11 key pair generation mechanism %s" in_string in failwith(s)
 
@@ -519,6 +520,7 @@ let match_string_to_p11_value in_string =
 | "CKM_BATON_SHUFFLE" -> Pkcs11.cKM_BATON_SHUFFLE
 | "CKM_BATON_WRAP" -> Pkcs11.cKM_BATON_WRAP
 | "CKM_ECDSA_KEY_PAIR_GEN" -> Pkcs11.cKM_ECDSA_KEY_PAIR_GEN
+| "CKM_EC_KEY_PAIR_GEN" -> Pkcs11.cKM_EC_KEY_PAIR_GEN
 | "CKM_ECDSA" -> Pkcs11.cKM_ECDSA
 | "CKM_ECDSA_SHA1" -> Pkcs11.cKM_ECDSA_SHA1
 | "CKM_ECDH1_DERIVE" -> Pkcs11.cKM_ECDH1_DERIVE
