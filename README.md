@@ -29,7 +29,7 @@ Dependencies for a Debian/Ubuntu machine:
 
     sudo apt-get install autoconf make gcc ocaml-nox camlidl coccinelle camlp4
 
-Buidling:
+Building:
 
     cd opkcs11-tool
     make
