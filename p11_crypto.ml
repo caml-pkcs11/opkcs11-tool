@@ -44,7 +44,9 @@ let print_mechanism_info slot_id mech =
     let (ret_value, info_) = Pkcs11.mL_CK_C_GetMechanismInfo slot_id mech in
     let _ = check_ret ret_value C_GetMechanismInfoError false in
     dbg_print !do_verbose "C_GetMechanismInfo" ret_value;
-    let msg = Printf.sprintf "  %s, keySize{%s, %s}" (Pkcs11.match_cKM_value mech)
+    let string_mech = (try Pkcs11.match_cKM_value mech
+      with _ -> "cKM_UNKNOWN!") in
+    let msg = Printf.sprintf "  %s, keySize{%s, %s}" (string_mech)
                                                     (Nativeint.to_string info_.Pkcs11.ck_mechanism_info_min_key_size)
                                                     (Nativeint.to_string info_.Pkcs11.ck_mechanism_info_max_key_size) in
     Printf.printf "%s" msg;

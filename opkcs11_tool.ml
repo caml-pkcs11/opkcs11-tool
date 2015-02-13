@@ -97,6 +97,7 @@ let speclist = [
     ("-keypairsize", Arg.Set_string key_pair_size, ": Supply the size of RSA modulus (size in bits)");
     ("-mechparams", Arg.Set_string mech_params, ": Supply the parameters of the mechanism (to be used during a key generation or other operations)");
     ("-mgftype", Arg.Set_string mgf_type, ": Supply the mgf parameter you would like to use (OAEP only, default to sha1 if unspecified)");
+    ("-curve-name", Arg.Set_string curve_name, ": Supply the namedCurve when generating your EC key pair (default to prime256v1)");
     ("-keygen", Arg.Set do_sym_key_gen, ": Toggle to create a symmetric key");
     ("-keysize", Arg.Set_string key_size, ": ");
     ("-setattributes", Arg.Set do_set_attributes, ": Set attributes on objects found with a search template, provided in another template");
@@ -383,15 +384,20 @@ let () =
                     let ks = 
                       (match !mech_string with
                        | ("RSA" |"rsa") -> 2048n
+                       | ("EC" | "ec" | "ECC" |"ecc") -> 0n (* Unused for EC *)
                        | _ -> 
                          (* If attributes have been provided, we possibly don't care *)
                          if (compare !provided_priv_attributes_array [||] <> 0) && (compare !provided_pub_attributes_array [||] <> 0) then
                            (0n)
                          else
-                           failwith "Error: you have provided an unknown symmetric key generation mechanism") in (ks)
+                           failwith "Error: you have provided an unknown asymmetric key generation mechanism") in (ks)
             | _ -> Nativeint.of_string !key_pair_size) in
         match !mech_string with
-            | "RSA" 
+            | "EC"
+            | "ec"
+            | "ECC"
+            | "ecc"
+            | "RSA"
             | "rsa" -> 
                 let label = (match !object_label_given with
                     false -> None
@@ -399,10 +405,10 @@ let () =
                 let id =  (match !object_id_given with
                     false -> None
                     | _ -> Some !object_id ) in
-                let (pub_, priv_) = generate_rsa_template the_key_size label id  in
+                let (pub_, priv_) = generate_key_pair_template !mech_string !curve_name the_key_size label id  in
                 let pub_ = merge_templates pub_ !provided_pub_attributes_array in
                 let priv_ = merge_templates priv_ !provided_priv_attributes_array in
-                let (_, _) = generate_rsa_key_pair session_ the_key_size pub_ priv_ !provided_mech_params_array in
+                let (_, _) = generate_key_pair session_ pub_ priv_ !mech_string !provided_mech_params_array in
                 ()
             | _ -> 
               (* If raw public and private key templates have been provided, we perform a raw generate key pair *)
