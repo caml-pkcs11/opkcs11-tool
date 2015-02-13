@@ -81,25 +81,42 @@ let print_info = fun info_ ->
     printf "Library          : %s (ver %s.%s)\n" library library_major library_minor
 
 let print_slots = fun slot ->
-    let (ret_valuea, slot_info_) = Pkcs11.mL_CK_C_GetSlotInfo slot in
-    let (ret_valueb, token_info_) = Pkcs11.mL_CK_C_GetTokenInfo slot in
-    (* Slot info *)
+	(* GetSlotInfo *)
+    let (ret_value, slot_info_) = Pkcs11.mL_CK_C_GetSlotInfo slot in
+    let _ = check_ret ret_value C_GetSlotInfoError false in
+    dbg_print !do_verbose "C_GetSlotInfo" ret_value;
+    (* Slot description *)
     let slot_desc = Pkcs11.char_array_to_string slot_info_.Pkcs11.ck_slot_info_slot_description in
-    (* Token info *)
-    let token_label = Pkcs11.char_array_to_string token_info_.Pkcs11.ck_token_info_label in
-    let token_manufacturer_id = Pkcs11.char_array_to_string token_info_.Pkcs11.ck_token_info_manufacturer_id in
-    let token_model = Pkcs11.char_array_to_string token_info_.Pkcs11.ck_token_info_model in
-    let token_serial_number = Pkcs11.char_array_to_string token_info_.Pkcs11.ck_token_info_serial_number in
-    let token_utc_time = Pkcs11.char_array_to_string token_info_.Pkcs11.ck_token_info_utc_time in
-    let token_max_session_count = token_info_.Pkcs11.ck_token_info_max_session_count in
-    if ret_valuea = Pkcs11.cKR_OK then printf "Slot description: %s\n" slot_desc;
-    if ret_valueb = Pkcs11.cKR_OK then
-    printf "  Token label:  %s\n" token_label;
-    printf "  Token id:     %s\n" token_manufacturer_id;
-    printf "  Token model:  %s\n" token_model;
-    printf "  Token serial: %s\n" token_serial_number;
-    printf "  Token UTC:    %s\n" token_utc_time;
-    printf "  Token max_session:  %s\n" (Nativeint.to_string token_max_session_count)
+    printf "Slot %s description: %s\n" (Nativeint.to_string slot) slot_desc;
+
+    if (check_bit_on slot_info_.Pkcs11.ck_slot_info_flags Pkcs11.cKF_TOKEN_PRESENT) then
+        (* GetTokenInfo *)
+        let (ret_value, token_info_) = Pkcs11.mL_CK_C_GetTokenInfo slot in
+        let _ = check_ret ret_value C_GetTokenInfoError false in
+        dbg_print !do_verbose "C_GetTokenInfo" ret_value;
+        if (check_bit_on token_info_.Pkcs11.ck_token_info_flags Pkcs11.cKF_TOKEN_INITIALIZED) then
+          begin
+            (* Token info *)
+            let token_label = Pkcs11.char_array_to_string token_info_.Pkcs11.ck_token_info_label in
+            let token_manufacturer_id = Pkcs11.char_array_to_string token_info_.Pkcs11.ck_token_info_manufacturer_id in
+            let token_model = Pkcs11.char_array_to_string token_info_.Pkcs11.ck_token_info_model in
+            let token_serial_number = Pkcs11.char_array_to_string token_info_.Pkcs11.ck_token_info_serial_number in
+            let token_utc_time = Pkcs11.char_array_to_string token_info_.Pkcs11.ck_token_info_utc_time in
+            let token_max_session_count = token_info_.Pkcs11.ck_token_info_max_session_count in
+            printf "  Token label:  %s\n" token_label;
+            printf "  Token id:     %s\n" token_manufacturer_id;
+            printf "  Token model:  %s\n" token_model;
+            printf "  Token serial: %s\n" token_serial_number;
+            printf "  Token UTC:    %s\n" token_utc_time;
+            printf "  Token max_session:  %s\n" (Nativeint.to_string token_max_session_count)
+          end
+		else
+	      (* Token in not initialized *)
+            printf "  (not initialized)\n";
+    else
+	  (* No token in slot *)
+        printf "  (empty)\n";
+	()
 
 (*********** ATTRIBUTES *********************************)
 (* Print an attribute depending on its class       *)

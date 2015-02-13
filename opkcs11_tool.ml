@@ -170,19 +170,12 @@ let () =
         let (ret_value, slot_list_, count) = Pkcs11.c_GetSlotList 0n 0n in
         let _ = check_ret ret_value C_GetSlotListError false in
         dbg_print !do_verbose "C_GetSlotList" ret_value;
-        (*
-          printf "C_GetSlotList ret: %s, Count = %s, slot_list =" (Nativeint.to_string ret_value) (Nativeint.to_string count) ;
-          Pkcs11.print_int_array slot_list_
-        *)
 
         (* Fetch slot list by passing 0n count *)
         let (ret_value, slot_list_, count) = Pkcs11.c_GetSlotList 0n count in
         let _ = check_ret ret_value C_GetSlotListError false in
         dbg_print !do_verbose "C_GetSlotList" ret_value;
-        (*
-          printf "C_GetSlotList ret: %s, Count = %s, slot_list =" (Nativeint.to_string ret_value) (Nativeint.to_string count) ;
-          Pkcs11.print_int_array slot_list_
-        *)
+
         Array.iter print_slots slot_list_;
       end;
 
