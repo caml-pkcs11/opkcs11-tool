@@ -45,8 +45,8 @@ open Printf
 let usage = "usage: " ^ Sys.argv.(0) ^ " [OPTIONS]"
 
 (* Basic password prompt *)
-let read_password () =
-  Printf.printf "Enter PIN:";
+let read_password msg =
+  Printf.printf "%s" msg;
   let term_init = Unix.tcgetattr Unix.stdin in
   let term_no_echo = { term_init with Unix.c_echo = false; } in
   Unix.tcsetattr Unix.stdin Unix.TCSANOW term_no_echo;
@@ -229,10 +229,12 @@ let () =
         let token_label = (match !object_label_given with
             false -> failwith "Specifying a token label is mandatory"
             | _ -> !object_label ) in
-        let nso_pin = (match !so_pin with
-            "" -> failwith "Specifying a SO pin is mandatory"
-            | _ -> !so_pin ) in
-	    let ret_value = Pkcs11.c_InitToken !native_slot_id (Pkcs11.string_to_char_array nso_pin) (Pkcs11.string_to_char_array token_label) in
+        if compare !so_pin "" = 0 then
+          begin
+            so_pin := read_password "Enter SO PIN:";
+          end;
+        check_empty_string !so_pin "C_InitToken requires a SO PIN!.\n" ;
+	    let ret_value = Pkcs11.c_InitToken !native_slot_id (Pkcs11.string_to_char_array !so_pin) (Pkcs11.string_to_char_array token_label) in
 	    let _ = check_ret ret_value C_InitTokenError false in
 	    dbg_print !do_verbose "C_InitToken" ret_value;
       end;
@@ -249,18 +251,22 @@ let () =
 	let _ = check_ret ret_value C_OpenSessionError false in
 	dbg_print !do_verbose "C_OpenSession" ret_value;
 
-        let n_pin = (match !user_pin with
-            "" -> failwith "Specifying a USER_PIN pin is mandatory"
-            | _ -> !user_pin ) in
-        let nso_pin = (match !so_pin with
-            "" -> failwith "Specifying a SO_PIN is mandatory"
-            | _ -> !so_pin ) in
+        if compare !so_pin "" = 0 then
+          begin
+            so_pin := read_password "Enter SO PIN:";
+          end;
+        if compare !user_pin "" = 0 then
+          begin
+            so_pin := read_password "Enter USER PIN:";
+          end;
+        check_empty_string !so_pin "C_InitPIN requires a SO PIN!.\n" ;
+        check_empty_string !user_pin "C_InitPIN requires a USER PIN!.\n" ;
 
-        let ret_value = Pkcs11.c_Login session_ Pkcs11.cKU_SO (Pkcs11.string_to_char_array nso_pin) in
+        let ret_value = Pkcs11.c_Login session_ Pkcs11.cKU_SO (Pkcs11.string_to_char_array !so_pin) in
         let _ = check_ret ret_value C_LoginError false in
         dbg_print !do_verbose "C_Login" ret_value;
 
-        let ret_value = Pkcs11.c_InitPIN session_ (Pkcs11.string_to_char_array n_pin) in
+        let ret_value = Pkcs11.c_InitPIN session_ (Pkcs11.string_to_char_array !user_pin) in
 	let _ = check_ret ret_value C_InitTokenError false in
 	dbg_print !do_verbose "C_InitToken" ret_value;
 
@@ -312,7 +318,7 @@ let () =
       begin
         if compare !user_pin "" = 0 then
           begin
-            user_pin := read_password ();
+            user_pin := read_password "Enter PIN:";
           end;
         check_empty_string !user_pin "You asked to authenticated but did not provide a PIN!.\n" ;
         let ret_value = Pkcs11.c_Login session_ Pkcs11.cKU_USER (Pkcs11.string_to_char_array !user_pin) in
