@@ -375,33 +375,6 @@ let generate_key_pair_template mech_string named_curve keysize keyslabel keysid 
                 | "rsa" -> ((generate_rsa_template keysize pub_template), priv_template)
                 | _ -> failwith "Unsupported string mechanism" )
 
-let generate_generic_rsa_template keysize keyslabel keysid =
-    let pub_template = [||] in
-    let priv_template = [||] in
-
-    let pubclass = Pkcs11.int_to_ulong_char_array Pkcs11.cKO_PUBLIC_KEY in
-    let pub_template = templ_append pub_template Pkcs11.cKA_CLASS pubclass in
-
-    let privclass = Pkcs11.int_to_ulong_char_array Pkcs11.cKO_PRIVATE_KEY in
-    let priv_template = templ_append priv_template Pkcs11.cKA_CLASS privclass in
-
-    let public_exponent = Pkcs11.string_to_char_array (Pkcs11.pack "010001") in
-    let pub_template = templ_append pub_template Pkcs11.cKA_PUBLIC_EXPONENT public_exponent in
-
-    let modulus_bits = match keysize with
-        512n -> Pkcs11.int_to_ulong_char_array keysize
-        |1024n -> Pkcs11.int_to_ulong_char_array keysize
-        |2048n -> Pkcs11.int_to_ulong_char_array keysize
-        |4096n -> Pkcs11.int_to_ulong_char_array keysize
-        |8192n -> Pkcs11.int_to_ulong_char_array keysize
-        |16384n -> Pkcs11.int_to_ulong_char_array keysize
-        | _ -> raise UnsupportedRSAKeySize in
-    let pub_template = templ_append pub_template Pkcs11.cKA_MODULUS_BITS modulus_bits in
-    let (pub_template, priv_template) = append_rsa_template Pkcs11.cKA_LABEL keyslabel pub_template priv_template in
-    let (pub_template, priv_template) = append_rsa_template Pkcs11.cKA_ID keysid pub_template priv_template in
-    let priv_template = templ_append priv_template Pkcs11.cKA_PRIVATE Pkcs11.true_ in
-    (pub_template, priv_template)
-
 (* TODO: we force a 1024 bit key here, on might want to support other sizes *)
 let generate_key_pair session pub_template priv_template mech_string parameters =
     (* MechanismChoice *)
