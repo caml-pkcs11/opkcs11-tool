@@ -570,7 +570,7 @@ let () =
         if (compare count_ 0n <> 0) then
         begin
           let verify_ = verify_some_data session_ mech objects_.(0) data data_verif in
-          printf "Verify operation returned : %s" (Pkcs11.match_cKR_value verify_);
+          printf "Verify operation returned : %s\n" (Pkcs11.match_cKR_value verify_);
           ()
         end
         else
