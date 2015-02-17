@@ -35,9 +35,9 @@ opkcs11_tool_ssl: build_bindings_standalone ssl_parse
 
 opkcs11_tool_standalone:
 	cd $(x509_dir) && ocamlopt -c helpers.ml oids.ml asn1.ml pkcs1_8.ml x509.ml && cd -
-	ocamlfind ocamlopt -pp "camlp4o pa_macro.cmo -DWITH_OCAML_X509" $(CFLAGS) -I $(x509_dir) -c p11_common.ml ssl.mli ssl.ml p11_objects.ml p11_infos.ml p11_crypto.ml
+	ocamlfind ocamlopt -pp "camlp4o pa_macro.cmo -DWITH_OCAML_X509" $(CFLAGS) -I $(x509_dir) -c ecc_helper.ml p11_common.ml ssl.mli ssl.ml p11_objects.ml p11_infos.ml p11_crypto.ml
 	ocamlfind ocamlopt $(CFLAGS) -c opkcs11_tool.ml
-	ocamlfind ocamlopt -linkpkg $(bindings_dir)/pkcs11_standalone.cmxa $(x509_dir)/helpers.cmx $(x509_dir)/oids.cmx $(x509_dir)/asn1.cmx $(x509_dir)/pkcs1_8.cmx $(x509_dir)/x509.cmx p11_common.cmx ssl.cmx p11_objects.cmx p11_infos.cmx p11_crypto.cmx opkcs11_tool.cmx $(LDFLAGS_STANDALONE) -o $(opkcs11_binary)
+	ocamlfind ocamlopt -linkpkg $(bindings_dir)/pkcs11_standalone.cmxa $(x509_dir)/helpers.cmx $(x509_dir)/oids.cmx $(x509_dir)/asn1.cmx $(x509_dir)/pkcs1_8.cmx $(x509_dir)/x509.cmx ecc_helper.cmx p11_common.cmx ssl.cmx p11_objects.cmx p11_infos.cmx p11_crypto.cmx opkcs11_tool.cmx $(LDFLAGS_STANDALONE) -o $(opkcs11_binary)
 
 
 clean:

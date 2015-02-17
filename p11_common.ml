@@ -1,4 +1,5 @@
 open Printf
+open Ecc_helper
 
 exception C_InitializeError
 exception C_FinalizeError
@@ -85,7 +86,6 @@ exception C_GetOperationStateError
 exception C_SetOperationStateError
 
 exception UnsupportedRSAKeySize
-exception UnsupportedNamedCurve
 exception UnsupportedSymmetricKeySize
 exception UnsupportedSymmetricKeyMechanism
 
@@ -323,16 +323,18 @@ let generate_rsa_template keysize pub_template =
            
     (pub_template)
 
-let generate_ecc_template named_curve pub_template =
-    let ec_params = match named_curve with
-        "" -> Printf.printf "Defaulting to curve prime256v1\n";
-              Pkcs11.string_to_char_array (Pkcs11.pack "06082a8648ce3d030107")
-        | "prime256v1" -> Pkcs11.string_to_char_array (Pkcs11.pack "06082a8648ce3d030107")
-        | _ -> raise UnsupportedNamedCurve in
-    let pub_template = templ_append pub_template Pkcs11.cKA_EC_PARAMS ec_params in
-    (pub_template)
+let generate_ecc_template named_curve pub_template use_named =
+    if use_named then
+        let ec_params = Pkcs11.string_to_char_array (Pkcs11.pack (Ecc_helper.match_named_curve_to_oid named_curve)) in
+        let pub_template = templ_append pub_template Pkcs11.cKA_EC_PARAMS ec_params in
+        (pub_template)
+    else
+        let ec_params = Pkcs11.string_to_char_array (Pkcs11.pack (Ecc_helper.match_named_curve_to_explicit_params named_curve)) in
+        let pub_template = templ_append pub_template Pkcs11.cKA_EC_PARAMS ec_params in
+        (pub_template)
 
-let generate_key_pair_template mech_string named_curve keysize keyslabel keysid =
+
+let generate_key_pair_template keyslabel keysid =
     let pub_template = [||] in
     let priv_template = [||] in
 
@@ -365,32 +367,31 @@ let generate_key_pair_template mech_string named_curve keysize keyslabel keysid 
     let priv_template = templ_append priv_template Pkcs11.cKA_EXTRACTABLE Pkcs11.false_ in
     *)
     let priv_template = templ_append priv_template Pkcs11.cKA_SENSITIVE Pkcs11.true_ in
+    (pub_template, priv_template)
 
-    (match mech_string with
-                | "EC"
-                | "ec"
-                | "ECC"
-                | "ecc" -> ((generate_ecc_template named_curve pub_template), priv_template)
-                | "RSA"
-                | "rsa" -> ((generate_rsa_template keysize pub_template), priv_template)
-                | _ -> failwith "Unsupported string mechanism" )
+let generate_ecc_key_pair_template named_curve keylabel keysid use_named =
+    let (pub_template, priv_template) = generate_key_pair_template keylabel keysid in
+    ((generate_ecc_template named_curve pub_template use_named), priv_template)
 
-(* TODO: we force a 1024 bit key here, on might want to support other sizes *)
-let generate_key_pair session pub_template priv_template mech_string parameters =
-    (* MechanismChoice *)
-    let my_mech = (match mech_string with
-        | "EC"
-        | "ec"
-        | "ECC"
-        | "ecc" -> { Pkcs11.mechanism = Pkcs11.cKM_EC_KEY_PAIR_GEN ; Pkcs11.parameter = parameters }
-        | "RSA"
-        | "rsa" -> { Pkcs11.mechanism = Pkcs11.cKM_RSA_PKCS_KEY_PAIR_GEN ; Pkcs11.parameter = parameters }
-        | _ -> failwith "Unsupported string mechanism" ) in
+let generate_rsa_key_pair_template keypairsize keylabel keysid =
+    let (pub_template, priv_template) = generate_key_pair_template keylabel keysid in
+    ((generate_rsa_template keypairsize pub_template), priv_template)
+
+(* Perform the C_GenerateKeyPair *)
+let generate_key_pair session pub_template priv_template mech continue_on_error =
     (* GenerateKeyPair *)
-    let (ret_value, pubkey_, privkey_) = Pkcs11.c_GenerateKeyPair session my_mech pub_template priv_template in
-    let _ = check_ret ret_value C_GenerateKeyPairError false in
+    let (ret_value, pubkey_, privkey_) = Pkcs11.c_GenerateKeyPair session mech pub_template priv_template in
+    let _ = check_ret ret_value C_GenerateKeyPairError continue_on_error in
     printf "C_GenerateKeyPair ret: %s\n" (Pkcs11.match_cKR_value ret_value);
-    (pubkey_, privkey_)
+    (pubkey_, privkey_, ret_value)
+
+let generate_ecc_key_pair session pub_template priv_template parameters continue_on_error =
+    let mech = { Pkcs11.mechanism = Pkcs11.cKM_EC_KEY_PAIR_GEN ; Pkcs11.parameter = parameters } in
+    (generate_key_pair session pub_template priv_template mech continue_on_error)
+
+let generate_rsa_key_pair session pub_template priv_template parameters =
+    let mech = { Pkcs11.mechanism = Pkcs11.cKM_RSA_PKCS_KEY_PAIR_GEN ; Pkcs11.parameter = parameters } in
+    (generate_key_pair session pub_template priv_template mech false)
 
 (* Generic function to generate a template for symmetric keys *)
 let generate_symkey_template mechanism keysize keylabel keyid provided_template_array =

@@ -378,37 +378,52 @@ let () =
         let _ = check_ret ret_value C_OpenSessionError false in
         dbg_print !do_verbose "C_OpenSession" ret_value;
 
-        (* FIXME: future should support a key-type and adapt *)
+        let label = (match !object_label_given with
+            false -> None
+            | _ -> Some !object_label ) in
+        let id =  (match !object_id_given with
+            false -> None
+            | _ -> Some !object_id ) in
+
+        (* Default keypairsize to 0n, let underlying functions handle that *)
         let the_key_size = (match !key_pair_size with
-            | "" -> let _ = Printf.printf "No asymmetric key pair size specified, adapting to provided mechanism\n" in
-                    let ks = 
-                      (match !mech_string with
-                       | ("RSA" |"rsa") -> 2048n
-                       | ("EC" | "ec" | "ECC" |"ecc") -> 0n (* Unused for EC *)
-                       | _ -> 
-                         (* If attributes have been provided, we possibly don't care *)
-                         if (compare !provided_priv_attributes_array [||] <> 0) && (compare !provided_pub_attributes_array [||] <> 0) then
-                           (0n)
-                         else
-                           failwith "Error: you have provided an unknown asymmetric key generation mechanism") in (ks)
+            | "" -> 0n
             | _ -> Nativeint.of_string !key_pair_size) in
+
         match !mech_string with
             | "EC"
             | "ec"
             | "ECC"
-            | "ecc"
-            | "RSA"
-            | "rsa" -> 
-                let label = (match !object_label_given with
-                    false -> None
-                    | _ -> Some !object_label ) in
-                let id =  (match !object_id_given with
-                    false -> None
-                    | _ -> Some !object_id ) in
-                let (pub_, priv_) = generate_key_pair_template !mech_string !curve_name the_key_size label id  in
+            | "ecc" ->
+                let (pub_, priv_) = generate_ecc_key_pair_template !curve_name label id true in
+                (* C_GenerateKeyPair for ECC, we'll try first using OID and if it fails
+                    we'll derive the curve parameters from name and retry *)
                 let pub_ = merge_templates pub_ !provided_pub_attributes_array in
                 let priv_ = merge_templates priv_ !provided_priv_attributes_array in
-                let (_, _) = generate_key_pair session_ pub_ priv_ !mech_string !provided_mech_params_array in
+                let continue_on_error = true in
+                let (_, _, ret_value) = generate_ecc_key_pair session_ pub_ priv_ !provided_mech_params_array continue_on_error in
+                let msg = Pkcs11.match_cKR_value ret_value in
+                (match msg with
+                      "cKR_OK" -> ()
+                    | "cKR_TEMPLATE_INCONSISTENT" -> ()
+                    | "cKR_TEMPLATE_INCOMPLETE" -> ()
+                    | _ -> printf "C_GenerateKeyPair failed for ECC, trying explicit parameters\n";
+                        let (pub_, priv_) = generate_ecc_key_pair_template !curve_name label id false in
+                        let pub_ = merge_templates pub_ !provided_pub_attributes_array in
+                        let priv_ = merge_templates priv_ !provided_priv_attributes_array in
+                        (* fail on second error *)
+                        let continue_on_error = false in
+                        let (_, _, _) = generate_ecc_key_pair session_ pub_ priv_ !provided_mech_params_array continue_on_error in ())
+            | "RSA"
+            | "rsa" -> 
+                if (compare the_key_size 0n = 0) then
+                    begin
+                    failwith "Please specify RSA asymmetric key pair size using -keypairsize\n"
+                    end;
+                let (pub_, priv_) = generate_rsa_key_pair_template the_key_size label id  in
+                let pub_ = merge_templates pub_ !provided_pub_attributes_array in
+                let priv_ = merge_templates priv_ !provided_priv_attributes_array in
+                let (_, _, _) = generate_rsa_key_pair session_ pub_ priv_ !provided_mech_params_array in
                 ()
             | _ -> 
               (* If raw public and private key templates have been provided, we perform a raw generate key pair *)
