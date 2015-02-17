@@ -174,6 +174,12 @@ let do_print_attributes the_attributes session_ object_ =
     ) the_attributes;
     ()
 
+let print_myclass_short in_string =
+  Printf.printf " ---------------------------------\n";
+  Printf.printf "| Object type: %s \n" in_string;
+  Printf.printf " ---------------------------------\n";
+  ()
+
 (*** Common attributes ***)
 let common_attrs = [|
                       (Pkcs11.cKA_CLASS, cK_CKO, true, None);
@@ -192,12 +198,11 @@ let common_key_attrs = [| (Pkcs11.cKA_LOCAL, cK_BOOL, true, None);
                           (Pkcs11.cKA_ID, cK_CHAR_PTR, true, Some "ID");
                           (Pkcs11.cKA_KEY_TYPE, cK_CKK, true, None);
                           (Pkcs11.cKA_PRIVATE, cK_BOOL, true, None);
-                          (Pkcs11.cKA_MODIFIABLE, cK_BOOL, true, None); 
                         |] 
 
 let print_common_keys_attrs session_ object_ =
     print_common_objects_attrs session_ object_;
-    Printf.printf " %-32s\n" "------ COMMON KEYS attributes ------" ;
+    Printf.printf " %-32s\n" "------ COMMON KEY attributes ------" ;
     do_print_attributes common_key_attrs session_ object_;
     ()
 
@@ -226,20 +231,56 @@ let print_secret_key_attrs session_ object_ =
     ()    
 
 (*** Public keys attributes ****)
-let pub_attrs =         [| (Pkcs11.cKA_ENCRYPT, cK_BOOL, true, None); 
-                           (Pkcs11.cKA_WRAP, cK_BOOL, true, None);
-                           (Pkcs11.cKA_VERIFY, cK_BOOL, true, None); 
-                           (Pkcs11.cKA_VERIFY_RECOVER, cK_BOOL, true, None);
-                           (Pkcs11.cKA_TRUSTED, cK_BOOL, true, None);
-                           (Pkcs11.cKA_MODULUS_BITS, cK_INTEGER, true, None);
-                           (Pkcs11.cKA_PUBLIC_EXPONENT, cK_CHAR_PTR, true, None)
-                         |]
+let pub_attrs = [| (Pkcs11.cKA_ENCRYPT, cK_BOOL, true, None);
+                   (Pkcs11.cKA_WRAP, cK_BOOL, true, None);
+                   (Pkcs11.cKA_VERIFY, cK_BOOL, true, None);
+                   (Pkcs11.cKA_VERIFY_RECOVER, cK_BOOL, true, None);
+                   (Pkcs11.cKA_TRUSTED, cK_BOOL, true, None);
+                |]
                       
+(*** RSA Public keys attributes ****)
+let rsa_pub_attrs =    [| (Pkcs11.cKA_MODULUS, cK_CHAR_PTR, true, None);
+                          (Pkcs11.cKA_MODULUS_BITS, cK_INTEGER, true, None);
+                          (Pkcs11.cKA_PUBLIC_EXPONENT, cK_CHAR_PTR, true, None)
+                       |]
+
+(*** DSA Public keys attributes ****)
+let dsa_pub_attrs = [| (Pkcs11.cKA_PRIME, cK_CHAR_PTR, true, Some "CKA_PRIME");
+                       (Pkcs11.cKA_SUBPRIME, cK_CHAR_PTR, true, Some "CKA_SUBPRIME");
+                       (Pkcs11.cKA_BASE, cK_CHAR_PTR, true, Some "CKA_BASE");
+                       (Pkcs11.cKA_VALUE, cK_CHAR_PTR, true, Some "CKA_VALUE")
+                    |]
+
+(*** DH Public keys attributes ****)
+let dh_pub_attrs = [| (Pkcs11.cKA_PRIME, cK_CHAR_PTR, true, Some "CKA_PRIME");
+                      (Pkcs11.cKA_BASE, cK_CHAR_PTR, true, Some "CKA_BASE");
+                      (Pkcs11.cKA_VALUE, cK_CHAR_PTR, true, Some "CKA_VALUE")
+                   |]
+
+
+(*** EC Public keys attributes ****)
+let ec_pub_attrs = [| (Pkcs11.cKA_EC_PARAMS, cK_CHAR_PTR, true, Some "CKA_EC_PARAMS");
+                      (Pkcs11.cKA_EC_POINT, cK_CHAR_PTR, true, Some "CKA_EC_POINT")
+                   |]
 
 let print_public_key_attrs session_ object_ =
     print_common_keys_attrs session_ object_;
     Printf.printf " %-32s\n" "------ PUBLIC-KEY attributes ------" ;
     do_print_attributes pub_attrs session_ object_;
+    let keytype_templ = [||] in
+    let keytype_templ = templ_append keytype_templ Pkcs11.cKA_KEY_TYPE [||] in
+    let (_, keytype_templ) = get_attributes session_ object_ keytype_templ in
+    let mykeytype = (Pkcs11.char_array_to_ulong keytype_templ.(0).Pkcs11.value) in
+    let mykeytype = Pkcs11.match_cKK_value mykeytype in
+    let msg = (match mykeytype with
+      | "cKK_RSA" -> print_myclass_short "RSA public key"; do_print_attributes rsa_pub_attrs session_ object_; ""
+      | "cKK_DSA" -> print_myclass_short "DSA public key"; do_print_attributes dsa_pub_attrs session_ object_; ""
+      | "cKK_EC" -> print_myclass_short "EC public key"; do_print_attributes ec_pub_attrs session_ object_; ""
+      | "cKK_DH" -> print_myclass_short "DH public key"; do_print_attributes dh_pub_attrs session_ object_; ""
+      | "cKK_X9_42_DH" -> print_myclass_short "X9.42 DH public key"; do_print_attributes dsa_pub_attrs session_ object_; ""
+      | "cKK_KEA" -> print_myclass_short "KEA public key"; do_print_attributes dsa_pub_attrs session_ object_; ""
+      | _ -> failwith "Sorry unknown public key type" ) in
+    Printf.printf "%s" msg;
     ()
 
 (*** Private keys attributes ****)
@@ -272,6 +313,19 @@ let print_certificate_attrs session_ object_ =
     print_common_objects_attrs session_ object_;
     Printf.printf " %-32s\n" "------ CERTIFICATE attributes ------" ;
     do_print_attributes cert_attrs session_ object_;
+    ()
+
+(*** DSA Domain parameters attributes ****)
+let dsa_domain_parameters_attrs = [| (Pkcs11.cKA_PRIME, cK_CHAR_PTR, true, Some "CKA_PRIME");
+                    (Pkcs11.cKA_SUBPRIME, cK_CHAR_PTR, true, Some "CKA_SUBPRIME");
+                    (Pkcs11.cKA_BASE, cK_CHAR_PTR, true, Some "CKA_BASE");
+                    (Pkcs11.cKA_PRIME_BITS, cK_INTEGER, true, None)
+                 |]
+
+let print_dsa_domain_parameters_attrs session_ object_ =
+    print_common_objects_attrs session_ object_;
+    Printf.printf " %-32s\n" "------ DSA-DOMAIN-PARAMETERS attributes ------" ;
+    do_print_attributes dsa_domain_parameters_attrs session_ object_;
     ()
 
 (******************************)
@@ -321,11 +375,6 @@ let print_additional_attributes session_ object_ =
     (* Do nothing if we are not asked to dump additional attributes *)
     ()
 
-let print_myclass_short in_string =
-  Printf.printf " ---------------------------------\n";
-  Printf.printf "| Object type: %s \n" in_string;
-  Printf.printf " ---------------------------------\n";
-  ()
 
 let print_object_attributes session_ object_ =
     let class_templ = [||] in
@@ -340,7 +389,7 @@ let print_object_attributes session_ object_ =
       | "cKO_CERTIFICATE" -> print_myclass_short "Certificate"; print_certificate_attrs session_ object_; ""
       | "cKO_PRIVATE_KEY" -> print_myclass_short "Private key"; print_private_key_attrs session_ object_; ""
       | "cKO_HW_FEATURE" -> print_myclass_short "Hardware feature"; "Sorry CKO_HW_FEATURE not supported yet."
-      | "cKO_DOMAIN_PARAMETERS" -> print_myclass_short "Domain parameters"; "Sorry CKO_DOMAIN_PARAMETERS not supported yet."
+      | "cKO_DOMAIN_PARAMETERS" -> print_myclass_short "Domain parameters"; print_dsa_domain_parameters_attrs session_ object_; ""
       | "cKO_MECHANISM" -> print_myclass_short "Mechanism"; "Sorry CKO_MECHANISM not supported yet."
       | _ -> failwith "Sorry unknown object type" ) in
     Printf.printf "%s" msg;

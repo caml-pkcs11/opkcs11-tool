@@ -39,6 +39,7 @@ open P11_common
 open P11_crypto
 open P11_objects
 open P11_infos
+open P11_templates
 open Printf
 
 let usage = "usage: " ^ Sys.argv.(0) ^ " [OPTIONS]"
@@ -424,6 +425,21 @@ let () =
                 let pub_ = merge_templates pub_ !provided_pub_attributes_array in
                 let priv_ = merge_templates priv_ !provided_priv_attributes_array in
                 let (_, _, _) = generate_rsa_key_pair session_ pub_ priv_ !provided_mech_params_array in
+                ()
+            | "DSA"
+            | "dsa" ->
+                if (compare the_key_size 0n = 0) then
+                    begin
+                    failwith "Please specify DSA asymmetric key pair size using -keypairsize\n"
+                    end;
+                (* In this case, we assume that we generate some domain
+                   parameters onboard and use feed them to the public key
+                   template for the DSA generation *)
+                let (obj_dsa_params, ret_value) = generate_dsa_domain_parameters session_ label the_key_size in
+                let (pub_, priv_) = generate_dsa_key_pair_template session_ obj_dsa_params label id  in
+                let pub_ = merge_templates pub_ !provided_pub_attributes_array in
+                let priv_ = merge_templates priv_ !provided_priv_attributes_array in
+                let (_, _, _) = generate_dsa_key_pair session_ pub_ priv_ !provided_mech_params_array in
                 ()
             | _ -> 
               (* If raw public and private key templates have been provided, we perform a raw generate key pair *)
