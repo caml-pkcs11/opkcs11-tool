@@ -411,9 +411,12 @@ let () =
                 let (_, _, ret_value) = generate_ecc_key_pair session_ pub_ priv_ !provided_mech_params_array continue_on_error in
                 let msg = Pkcs11.match_cKR_value ret_value in
                 (match msg with
+                    (* basic check, if successful or "typical error", do not ty
+                       again *)
                       "cKR_OK" -> ()
                     | "cKR_TEMPLATE_INCONSISTENT" -> ()
                     | "cKR_TEMPLATE_INCOMPLETE" -> ()
+                    (* OK, let's try again using explicit EC parameters *)
                     | _ -> printf "C_GenerateKeyPair failed for ECC, trying explicit parameters\n";
                         let (pub_, priv_) = generate_ecc_key_pair_template !curve_name label id false in
                         let pub_ = merge_templates pub_ !provided_pub_attributes_array in
