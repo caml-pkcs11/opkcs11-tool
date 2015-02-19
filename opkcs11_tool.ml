@@ -127,7 +127,7 @@ let speclist = [
 let check_empty_string string_ error_msg =
     if (string_) = "" then
       begin
-          Printf.printf error_msg;
+          Printf.printf "%s" error_msg;
           exit 1;
       end;
     ()
@@ -257,7 +257,7 @@ let () =
           end;
         if compare !user_pin "" = 0 then
           begin
-            so_pin := read_password "Enter USER PIN:";
+            user_pin := read_password "Enter USER PIN:";
           end;
         check_empty_string !so_pin "C_InitPIN requires a SO PIN!.\n" ;
         check_empty_string !user_pin "C_InitPIN requires a USER PIN!.\n" ;
