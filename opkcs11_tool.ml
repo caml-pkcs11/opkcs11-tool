@@ -80,9 +80,11 @@ let speclist = [
     ("-unwrap", Arg.Set do_unwrap, ": Unwrap a key (use -wrap-attributes to find the unwrapping key and -attributes for the expected attributes of the resulting object");
     ("-w", Arg.Set do_write, ": Create an object");
     ("-c", Arg.Set do_copy_objects, ": Copy an object with new attributes");
-    ("-init-token", Arg.Set do_init_token, ": Initialize the token, its label and its SO PIN (use with -label and -so-pin");
-    ("-init-pin", Arg.Set do_init_pin, ": Initialize the USER_PIN, (use with -pin and -so-pin");
-    ("-so-pin", Arg.Set_string so_pin, ": Specify the SO_PIN");
+    ("-init-token", Arg.Set do_init_token, ": Initialize the token, its label and its SO PIN (use with -label and -so-pin)");
+    ("-init-pin", Arg.Set do_init_pin, ": Initialize the USER PIN, (use with -pin and -so-pin)");
+    ("-login-type", Arg.Set_string login_type, ": Specify login type ('so', 'user', default 'user')");
+    ("-change-pin", Arg.Set do_change_pin, ": Change the PIN, (use with -login-type");
+    ("-so-pin", Arg.Set_string so_pin, ": Specify the SO PIN");
     ("-type", Arg.Set_string object_type, ": Specify the object type (cert, pubkey, privkey)");
     ("-in", Arg.Set_string input_data, ": Specify the input data");
     ("-out", Arg.Set_string output_data, ": Specify the output data");
@@ -243,6 +245,48 @@ let () =
       begin
       Printf.printf "Token is not initialized, further functions will fail\n";
       end;
+
+    (* Change a PIN *)
+    if (!do_change_pin) then
+      begin
+	let (ret_value, session_) = Pkcs11.c_OpenSession !native_slot_id (Nativeint.logor Pkcs11.cKF_SERIAL_SESSION Pkcs11.cKF_RW_SESSION) in
+	let _ = check_ret ret_value C_OpenSessionError false in
+	dbg_print !do_verbose "C_OpenSession" ret_value;
+
+    let (log_type, pin, new_pin) = (match !login_type with
+        | "user" ->
+            if compare !user_pin "" = 0 then
+              begin
+                user_pin := read_password "Enter USER PIN:";
+              end;
+            let new_pin = read_password "Enter NEW USER PIN:" in
+            (Pkcs11.cKU_USER, !user_pin, new_pin)
+
+        | "so" ->
+            if compare !so_pin "" = 0 then
+              begin
+                so_pin := read_password "Enter SO PIN:";
+              end;
+            let new_pin = read_password "Enter NEW SO PIN:" in
+            (Pkcs11.cKU_SO, !so_pin, new_pin)
+
+        | _ -> failwith "Unsupported login type") in
+
+    check_empty_string pin (Printf.sprintf "Changing PIN for %s requires a PIN!.\n" !login_type);
+    check_empty_string new_pin (Printf.sprintf "Changing PIN for %s requires a NEW PIN!.\n" !login_type) ;
+
+    let ret_value = Pkcs11.c_Login session_ log_type (Pkcs11.string_to_char_array pin) in
+    let _ = check_ret ret_value C_LoginError false in
+    dbg_print !do_verbose "C_Login" ret_value;
+
+    let ret_value = Pkcs11.c_SetPIN session_ (Pkcs11.string_to_char_array pin) (Pkcs11.string_to_char_array new_pin) in
+    let _ = check_ret ret_value C_SetPINError false in
+    dbg_print !do_verbose "C_SetPIN" ret_value;
+
+    let ret_value = Pkcs11.c_CloseSession session_ in
+	let _ = check_ret ret_value C_CloseSessionError false in
+	dbg_print !do_verbose "C_CloseSession" ret_value;
+    end;
 
     (* Init a PIN *)
     if (!do_init_pin) then
