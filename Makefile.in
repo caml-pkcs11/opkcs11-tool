@@ -7,6 +7,7 @@ CFLAGS = -I $(bindings_dir)
 LDFLAGS = -package "str,unix" -cclib -lcamlidl -cclib -L$(bindings_dir) -cclib -L./ -cclib -lmyssl -cclib -lssl -cclib -lcrypto
 LDFLAGS_STANDALONE= -package "str,unix" -cclib -lcamlidl -cclib -L$(bindings_dir) -cclib -L./
 opkcs11_binary=opkcs11-tool
+prefix=${DESTDIR}@prefix@
 
 
 all: build_bindings_standalone opkcs11_tool_standalone
@@ -34,6 +35,9 @@ opkcs11_tool_standalone:
 	ocamlfind ocamlopt $(CFLAGS) -c opkcs11_tool.ml
 	ocamlfind ocamlopt -linkpkg $(bindings_dir)/pkcs11_standalone.cmxa $(x509_dir)/helpers.cmx $(x509_dir)/oids.cmx $(x509_dir)/asn1.cmx $(x509_dir)/pkcs1_8.cmx $(x509_dir)/x509.cmx ecc_helper.cmx p11_common.cmx ssl.cmx p11_objects.cmx p11_infos.cmx p11_crypto.cmx p11_templates.cmx opkcs11_tool.cmx $(LDFLAGS_STANDALONE) -o $(opkcs11_binary)
 
+install:
+	echo "Installing $(opkcs11_binary) to ${prefix}/bin/$(opkcs11_binary)"
+	install -D $(opkcs11_binary) ${prefix}/bin/$(opkcs11_binary)
 
 clean:
 	cd $(caml_crush_dir);\
