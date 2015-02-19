@@ -20,6 +20,17 @@ let supported_named_curves = [
    "sect571r1";
    ]
 
+(* Ocaml <4.00.1 does not include List.iteri, use the one in Helpers *)
+IFDEF NEED_CUSTOM_LISTITERI THEN
+let print_supported_named_curve _ =
+    Printf.printf "List of known named curves:";
+    Helpers.iteri (fun a b -> if compare (a mod 5) 0 = 0 then
+                               Printf.printf "\n";
+                            (Printf.printf "%s ")b
+               ) supported_named_curves;
+    Printf.printf "\n";
+    ()
+ELSE
 (* List.iteri is ugly but useful to "pretty" print the curve list *)
 let print_supported_named_curve _ =
     Printf.printf "List of known named curves:";
@@ -29,6 +40,7 @@ let print_supported_named_curve _ =
                ) supported_named_curves;
     Printf.printf "\n";
     ()
+ENDIF
 
 (* generated using:
    openssl ecparam -name ${named_curve} -out ./${named_curve}_short.der -outform DER

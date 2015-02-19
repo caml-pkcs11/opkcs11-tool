@@ -17,6 +17,15 @@ let print_hex_array a =
   Printf.printf "\n";
   ()
 
+(* Ocaml version <4.00.1 does not include List.iteri, provide it*)
+IFDEF NEED_CUSTOM_LISTITERI THEN
+let rec iteri i f = function
+        [] -> ()
+        | a::l -> f i a; iteri (i + 1) f l
+
+let iteri f l = iteri 0 f l
+ENDIF
+
 let string_to_char_array s =
   (Array.init (String.length s) (fun i -> s.[i]))
 let int_to_hexchar (i : nativeint) : char =
@@ -90,8 +99,14 @@ let char_array_to_string = fun a -> let s = String.create (Array.length a) in
 
 let string_to_char_array = fun s -> Array.init (String.length s) (fun i -> s.[i]);;
 
+(* Ocaml version <4.00.1 does not include List.iteri, provide it*)
+IFDEF NEED_CUSTOM_LISTITERI THEN
+let char_list_to_string = fun a -> let s = String.create (List.length a) in
+  iteri (fun i x -> String.set s i x) a; s;;
+ELSE
 let char_list_to_string = fun a -> let s = String.create (List.length a) in
   List.iteri (fun i x -> String.set s i x) a; s;;
+ENDIF
 
 let string_to_char_list = fun s -> Array.to_list (string_to_char_array s);;
 
