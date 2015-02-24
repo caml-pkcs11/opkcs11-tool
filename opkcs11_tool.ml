@@ -599,7 +599,14 @@ let () =
             | _ -> Pkcs11.string_to_cKM_value !mech_string ) in
         let mech = { Pkcs11.mechanism = mech_type; Pkcs11.parameter = [||]} in
         (* find a privkey to sign *)
-        let template = [||] in
+        let template = (
+          if !object_label_given = true then
+            [|{ Pkcs11.type_ =Pkcs11.cKA_LABEL ; Pkcs11.value = Pkcs11.string_to_char_array !object_label }|]
+          else if !object_id_given = true then
+            [|{ Pkcs11.type_ =Pkcs11.cKA_ID ; Pkcs11.value = Pkcs11.string_to_char_array !object_id }|]
+          else
+            [||]
+        ) in
         let template = templ_append template Pkcs11.cKA_CLASS (Pkcs11.int_to_ulong_char_array Pkcs11.cKO_PRIVATE_KEY) in
         let template = templ_append template Pkcs11.cKA_SIGN Pkcs11.true_ in
         let template = merge_templates template !provided_search_attributes_array in
@@ -631,7 +638,14 @@ let () =
             | _ -> Pkcs11.string_to_cKM_value !mech_string ) in
         let mech = { Pkcs11.mechanism = mech_type; Pkcs11.parameter = [||]} in
         (* find a pubkey to verify *)
-        let template = [||] in
+        let template = (
+          if !object_label_given = true then
+            [|{ Pkcs11.type_ =Pkcs11.cKA_LABEL ; Pkcs11.value = Pkcs11.string_to_char_array !object_label }|]
+          else if !object_id_given = true then
+            [|{ Pkcs11.type_ =Pkcs11.cKA_ID ; Pkcs11.value = Pkcs11.string_to_char_array !object_id }|]
+          else
+            [||]
+        ) in
         let template = templ_append template Pkcs11.cKA_CLASS (Pkcs11.int_to_ulong_char_array Pkcs11.cKO_PUBLIC_KEY) in
         let template = templ_append template Pkcs11.cKA_VERIFY Pkcs11.true_ in
         let template = merge_templates template !provided_search_attributes_array in
@@ -655,7 +669,14 @@ let () =
             | _ -> Pkcs11.string_to_cKM_value !mech_string ) in
         let mech = { Pkcs11.mechanism = mech_type; Pkcs11.parameter = !provided_mech_params_array} in
         (* find a pubkey to encrypt *)
-        let template = [||] in
+        let template = (
+          if !object_label_given = true then
+            [|{ Pkcs11.type_ =Pkcs11.cKA_LABEL ; Pkcs11.value = Pkcs11.string_to_char_array !object_label }|]
+          else if !object_id_given = true then
+            [|{ Pkcs11.type_ =Pkcs11.cKA_ID ; Pkcs11.value = Pkcs11.string_to_char_array !object_id }|]
+          else
+            [||]
+        ) in
         let template = templ_append template Pkcs11.cKA_ENCRYPT Pkcs11.true_ in
         let template = merge_templates template !provided_search_attributes_array in
         let (objects_, count_) =  find_objects session_ template !max_objects in
@@ -684,7 +705,14 @@ let () =
             | _ -> Pkcs11.string_to_cKM_value !mech_string ) in
         let mech = { Pkcs11.mechanism = mech_type; Pkcs11.parameter = !provided_mech_params_array} in
         (* find a privkey to decrypt *)
-        let template = [||] in
+        let template = (
+          if !object_label_given = true then
+            [|{ Pkcs11.type_ =Pkcs11.cKA_LABEL ; Pkcs11.value = Pkcs11.string_to_char_array !object_label }|]
+          else if !object_id_given = true then
+            [|{ Pkcs11.type_ =Pkcs11.cKA_ID ; Pkcs11.value = Pkcs11.string_to_char_array !object_id }|]
+          else
+            [||]
+        ) in
         let template = templ_append template Pkcs11.cKA_CLASS (Pkcs11.int_to_ulong_char_array Pkcs11.cKO_PRIVATE_KEY) in
         let template = templ_append template Pkcs11.cKA_DECRYPT Pkcs11.true_ in
         let template = merge_templates template !provided_search_attributes_array in
