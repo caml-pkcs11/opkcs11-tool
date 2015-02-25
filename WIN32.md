@@ -17,9 +17,7 @@ Second:
 
   * Use WODI package manager to install **camlidl**
 
-Third:
-
-  * Start a Cygwin shell:
+Third, start a Cygwin shell:
 
     #replace test with you current user
     cd /cygdrive/c/Users/test/Downloads
