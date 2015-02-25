@@ -32,6 +32,10 @@ echo "###               SUMMARY               ###" >> ./summary
 echo "###########################################" >> ./summary
 
 ##########
+# Pass the host to underlying layers
+AC_SUBST(host, $host)
+
+##########
 # CHECK Make
 
 case $host_type in

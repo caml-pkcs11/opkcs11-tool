@@ -13,3 +13,5 @@ for (( i = 0 ; i < ${#clean_dirs[*]} ; i++ ))
 do
   rm -f ${clean_dirs[i]}/Makefile
 done
+#Cleaning Makefile.in which will be cp depending on platform
+rm -f ${main_dir}/Makefile.in
