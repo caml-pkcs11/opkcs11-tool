@@ -36,7 +36,7 @@ Building:
 
 ## Quickstart - Windows
 It is possible to compile opkcs11-tool for Windows 32/64.
-Detailed instructions will be provided at a later time.
+Documentation on how to build for Windows, [check the dedicated page](WIN32.md).
 
 ## Documentation
 A more complete documentation will be provided at a later time.
