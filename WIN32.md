@@ -22,21 +22,27 @@ Third, start a Cygwin shell:
 
     #replace test with you current user
     cd /cygdrive/c/Users/test/Downloads
-    wget https://github.com/ANSSI-FR/caml-crush/archive/w32-x86.zip -O caml-crush-master.zip
-    unzip caml-crush-master.zip
+    wget https://github.com/ANSSI-FR/caml-crush/archive/win32-x86.zip -O caml-crush-win32-x86.zip
+    unzip caml-crush-win32-x86.zip
     wget https://github.com/ANSSI-FR/opkcs11-tool/archive/master.zip -O opkcs11-tool-master.zip
     unzip opkcs11-tool-master.zip
     cd opkcs11-tool-master
-    mv ../caml-crush-master ./
+    mv ../caml-crush-win32-x86 ./
     ./autogen.sh
-    ./configure --with-caml-crush=caml-crush-master --host=i686-w64-mingw32
+    ./configure --with-caml-crush=caml-crush-win32-x86 --host=i686-w64-mingw32
     make
 
 At this stage you should be done. You can then test **opkcs11-tool.exe**
 
 ## Using WODI and Cygwin for 64 bits
 
-This has not been tested yet.
+The procedure is roughly identical, you have to install WODI 64 bits.
+
+The rest of the procedure is almost identical, you only have to provide a different ``configure`` command:
+
+    ./configure --with-caml-crush=caml-crush-win32-x86 --host=x86_64-w64-mingw32
+
+Note the difference: ``--host=x86_64-w64-mingw32``.
 
 ## Using OCaml build with MSVC
 
