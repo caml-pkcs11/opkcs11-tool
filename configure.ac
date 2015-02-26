@@ -68,10 +68,6 @@ if test "$OCAMLOPT" = "no"; then
   AC_MSG_ERROR([You must install the OCaml compiler])
 fi
 
-if test "$OCAMLCDOTOPT" = "no"; then
-  AC_MSG_ERROR([You must install the OCaml compiler])
-fi
-
 if test "$OCAMLDEP" = "no"; then
   AC_MSG_WARN([Cannot find ocamldep.])
 fi
