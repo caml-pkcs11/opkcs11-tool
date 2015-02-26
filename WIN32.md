@@ -1,6 +1,7 @@
 # opkcs11-tool
 
 Building for Win32 platform is possible using either WODI-Cygwin or MSVC.
+
 However, it is more convenient to use the WODI-Cygwin approach as it does not
 require recompiling OCaml using MSVC.
 
@@ -9,7 +10,7 @@ require recompiling OCaml using MSVC.
 First: 
 
   * [Download and install the OCaml WODI environment](http://wodi.forge.ocamlcore.org/download.html)
-  * When installing Cygwin, configure you mirror and add the following addition packages
+  * When installing Cygwin, configure your mirror and add the following additional packages
     * autoconf
     * automake
 
@@ -29,10 +30,9 @@ Third, start a Cygwin shell:
     mv ../caml-crush-master ./
     ./autogen.sh
     ./configure --with-caml-crush=caml-crush-master --host=i686-w64-mingw32
-    CPPFLAGS=-fpack-struct=1 make
+    make
 
 At this stage you should be done. You can then test **opkcs11-tool.exe**
-
 
 ## Using WODI and Cygwin for 64 bits
 
