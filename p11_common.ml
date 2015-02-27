@@ -101,6 +101,7 @@ let do_show_objects = ref false
 let do_init_token = ref false
 let do_init_pin = ref false
 let do_change_pin = ref false
+let do_unblock_pin = ref false
 let do_login = ref false
 let do_destroy = ref false
 let do_destroy_all = ref false

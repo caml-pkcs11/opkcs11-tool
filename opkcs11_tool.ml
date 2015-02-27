@@ -84,6 +84,7 @@ let speclist = [
     ("-init-pin", Arg.Set do_init_pin, ": Initialize the USER PIN, (use with -pin and -so-pin)");
     ("-login-type", Arg.Set_string login_type, ": Specify login type ('so', 'user', default 'user')");
     ("-change-pin", Arg.Set do_change_pin, ": Change the PIN, (use with -login-type");
+    ("-unblock-pin", Arg.Set do_unblock_pin, ": Unblock the PIN (unlogged session, oldPin is PUK)");
     ("-so-pin", Arg.Set_string so_pin, ": Specify the SO PIN");
     ("-type", Arg.Set_string object_type, ": Specify the object type (cert, pubkey, privkey)");
     ("-in", Arg.Set_string input_data, ": Specify the input data");
@@ -280,6 +281,37 @@ let () =
     dbg_print !do_verbose "C_Login" ret_value;
 
     let ret_value = Pkcs11.c_SetPIN session_ (Pkcs11.string_to_char_array pin) (Pkcs11.string_to_char_array new_pin) in
+    let _ = check_ret ret_value C_SetPINError false in
+    dbg_print !do_verbose "C_SetPIN" ret_value;
+
+    let ret_value = Pkcs11.c_CloseSession session_ in
+	let _ = check_ret ret_value C_CloseSessionError false in
+	dbg_print !do_verbose "C_CloseSession" ret_value;
+    end;
+
+    (* Unblock a PIN *)
+    (* This follows OpenSC convention, user_pin_unblock_style =
+       set_pin_in_unlogged_session *)
+    if (!do_unblock_pin) then
+      begin
+	let (ret_value, session_) = Pkcs11.c_OpenSession !native_slot_id (Nativeint.logor Pkcs11.cKF_SERIAL_SESSION Pkcs11.cKF_RW_SESSION) in
+	let _ = check_ret ret_value C_OpenSessionError false in
+	dbg_print !do_verbose "C_OpenSession" ret_value;
+
+    if compare !so_pin "" = 0 then
+      begin
+        so_pin := read_password "Enter SO PIN:";
+      end;
+
+    if compare !user_pin "" = 0 then
+      begin
+        user_pin := read_password "Enter NEW USER PIN:";
+      end;
+
+    check_empty_string !user_pin "Unblock PIN requires a NEW PIN!.\n";
+    check_empty_string !so_pin "Unblock PIN requires a PUK (SO_PIN)!.\n";
+
+    let ret_value = Pkcs11.c_SetPIN session_ (Pkcs11.string_to_char_array !so_pin) (Pkcs11.string_to_char_array !user_pin) in
     let _ = check_ret ret_value C_SetPINError false in
     dbg_print !do_verbose "C_SetPIN" ret_value;
 
