@@ -137,6 +137,7 @@ let rand_len = ref ""
 let pub_template = ref ""
 let priv_template = ref ""
 let token_initialized = ref false
+let token_supports_protected_auth_path = ref false
 let do_set_attributes = ref false
 let dump_attributes_string = ref ""
 let do_copy_objects = ref false

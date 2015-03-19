@@ -53,7 +53,7 @@ let read_password msg =
   let password = read_line () in
   Unix.tcsetattr Unix.stdin Unix.TCSAFLUSH term_init;
   Printf.printf "\n";
-  password
+  (password)
 
 let check_input_data my_data message =
     let data = (match !my_data with
@@ -216,6 +216,11 @@ let () =
       begin
         token_initialized := true;
       end;
+    if (check_bit_on token_infos_.Pkcs11.ck_token_info_flags Pkcs11.cKF_PROTECTED_AUTHENTICATION_PATH) then
+      begin
+        token_supports_protected_auth_path := true;
+      end;
+
 
     (* Asked to print token infos *)
     if (!do_show_token) then
@@ -397,12 +402,21 @@ let () =
     (* Perform login *)
     if (!do_login) then
       begin
-        if compare !user_pin "" = 0 then
+      let pin_array = (
+        if (!token_supports_protected_auth_path) = true then
+          [||]
+        else
           begin
-            user_pin := read_password "Enter PIN:";
-          end;
-        check_empty_string !user_pin "You asked to authenticated but did not provide a PIN!.\n" ;
-        let ret_value = Pkcs11.c_Login session_ Pkcs11.cKU_USER (Pkcs11.string_to_char_array !user_pin) in
+          user_pin := (
+            if compare !user_pin "" = 0 then
+              (read_password "Enter PIN:")
+            else
+              !user_pin);
+          check_empty_string !user_pin "You asked to authenticated but did not provide a PIN!.\n" ;
+          (Pkcs11.string_to_char_array !user_pin)
+          end
+      ) in
+        let ret_value = Pkcs11.c_Login session_ Pkcs11.cKU_USER pin_array in
         let _ = check_ret ret_value C_LoginError false in
         dbg_print !do_verbose "C_Login" ret_value;
         ()
