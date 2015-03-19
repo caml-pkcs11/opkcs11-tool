@@ -201,7 +201,12 @@ let () =
                         dbg_print !do_verbose "C_GetSlotList" ret_value;
                         Printf.printf "Using slot %s.\n" (Nativeint.to_string slot_list_.(0));
                         slot_list_.(0)
-                    | _ -> Nativeint.of_string !slot_id );
+                    | _ -> let (_, _, _) = Pkcs11.c_GetSlotList 0n 0n in
+                            (* Some library requires a GetSlotList call (OpenSC)
+                                in order to initialize internal structure and
+                                slot_ids. This is why we perform a useless call
+                                here *)
+                                Nativeint.of_string !slot_id );
  
     let (ret_value, token_infos_) = Pkcs11.c_GetTokenInfo !native_slot_id in
     let _ = check_ret ret_value C_GetTokenInfoError false in
