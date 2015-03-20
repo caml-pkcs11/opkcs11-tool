@@ -44,15 +44,21 @@ open Printf
 
 let usage = "usage: " ^ Sys.argv.(0) ^ " [OPTIONS]"
 
+let myPrintf format_string =
+  if (!do_quiet) = true then
+       (Printf.eprintf format_string)
+  else
+       (Printf.printf format_string)
+
 (* Basic password prompt *)
 let read_password msg =
-  Printf.printf "%s" msg;
+  myPrintf "%s" msg;
   let term_init = Unix.tcgetattr Unix.stdin in
   let term_no_echo = { term_init with Unix.c_echo = false; } in
   Unix.tcsetattr Unix.stdin Unix.TCSANOW term_no_echo;
   let password = read_line () in
   Unix.tcsetattr Unix.stdin Unix.TCSAFLUSH term_init;
-  Printf.printf "\n";
+  myPrintf "\n";
   (password)
 
 let check_input_data my_data message =
@@ -73,6 +79,7 @@ let speclist = [
     ("-d", Arg.Set do_hash, ": Digest (hash) some data");
     ("-s", Arg.Set do_sign, ": Sign some data");
     ("-v", Arg.Set do_verify, ": Perform onboard verify");
+    ("-q", Arg.Set do_quiet, ": Perform quietly, output crypto results on stdout, others on stderr");
     ("-verify", Arg.Set_string data_to_verify, ": Signed input to verify");
     ("-enc", Arg.Set do_encrypt, ": Encrypt some data");
     ("-dec", Arg.Set do_decrypt, ": Decrypt some data");
@@ -92,6 +99,7 @@ let speclist = [
     ("-mech", Arg.Set_string mech_string, ": Specify the mechanism to use");
     ("-slot", Arg.Set_string slot_id, ": Specify the slot ID to use");
     ("-pin", Arg.Set_string user_pin, ": Supply User PIN on the command line");
+    ("-env-pin", Arg.Set user_pin_env, ": User PIN is fetched from environment variable (-pin is the variable)");
     ("-label", Arg.String object_label_func, ": Supply object label (in ASCII) to filter objects");
     ("-id", Arg.String object_id_func, ": Supply object id (in hexadecimal) to filter objects");
     ("-maxobjects", Arg.Set_string max_objects_string, ": Supply maximum number of object to deal with (default is all objects on the token)"); 
@@ -130,7 +138,7 @@ let speclist = [
 let check_empty_string string_ error_msg =
     if (string_) = "" then
       begin
-          Printf.printf "%s" error_msg;
+          myPrintf "%s" error_msg;
           exit 1;
       end;
     ()
@@ -191,7 +199,7 @@ let () =
                         dbg_print !do_verbose "C_GetSlotList" ret_value;
                         if count = 0n then
                           begin
-                          Printf.printf "No slot with a token was found.\n";
+                          myPrintf "No slot with a token was found.\n";
                           exit 0;
                           end;
 
@@ -199,7 +207,7 @@ let () =
                         let (ret_value, slot_list_, count) = Pkcs11.c_GetSlotList 1n count in
                         let _ = check_ret ret_value C_GetSlotListError false in
                         dbg_print !do_verbose "C_GetSlotList" ret_value;
-                        Printf.printf "Using slot %s.\n" (Nativeint.to_string slot_list_.(0));
+                        myPrintf "Using slot %s.\n" (Nativeint.to_string slot_list_.(0));
                         slot_list_.(0)
                     | _ -> let (_, _, _) = Pkcs11.c_GetSlotList 0n 0n in
                             (* Some library requires a GetSlotList call (OpenSC)
@@ -254,7 +262,7 @@ let () =
 
     if (!token_initialized) = false then
       begin
-      Printf.printf "Token is not initialized, further functions will fail\n";
+      myPrintf "Token is not initialized, further functions will fail\n";
       end;
 
     (* Change a PIN *)
@@ -408,7 +416,9 @@ let () =
         else
           begin
           user_pin := (
-            if compare !user_pin "" = 0 then
+            if (!user_pin_env) = true then
+                (Sys.getenv !user_pin)
+            else if compare !user_pin "" = 0 then
               (read_password "Enter PIN:")
             else
               !user_pin);
@@ -436,7 +446,7 @@ let () =
         ) in
         let template = merge_templates template !provided_search_attributes_array in
         let (objects_, count_) =  find_objects session_ template !max_objects in
-        Printf.printf "%s objects found\n" (Nativeint.to_string count_);
+        myPrintf "%s objects found\n" (Nativeint.to_string count_);
         Array.iter (print_object_attributes session_)  objects_;
         ()
       end;
@@ -512,7 +522,7 @@ let () =
                     | "cKR_TEMPLATE_INCONSISTENT" -> ()
                     | "cKR_TEMPLATE_INCOMPLETE" -> ()
                     (* OK, let's try again using explicit EC parameters *)
-                    | _ -> printf "C_GenerateKeyPair failed for ECC, trying explicit parameters\n";
+                    | _ -> myPrintf "C_GenerateKeyPair failed for ECC, trying explicit parameters\n";
                         let (pub_, priv_) = generate_ecc_key_pair_template !curve_name label id false in
                         let pub_ = merge_templates pub_ !provided_pub_attributes_array in
                         let priv_ = merge_templates priv_ !provided_priv_attributes_array in
@@ -559,7 +569,7 @@ let () =
                  let mech = match_string_to_keygenpair_mech_value !mech_string in 
                  let (ret_value, _, _) = Pkcs11.c_GenerateKeyPair session_ {Pkcs11.mechanism = mech; Pkcs11.parameter = !provided_mech_params_array} pub_ priv_ in
                  let _ = check_ret ret_value C_GenerateKeyPairError false in
-                 printf "C_GenerateKeyPair ret: %s\n" (Pkcs11.match_cKR_value ret_value);
+                 myPrintf "C_GenerateKeyPair ret: %s\n" (Pkcs11.match_cKR_value ret_value);
               else
                 (* Else, we fail *)
                 failwith "Unsupported key pair generation mechanism, RSA or custom provided mechanisms/templates only"
@@ -574,7 +584,7 @@ let () =
 
         (* FIXME: future should support other key-types and adapt *)
         let the_key_size = (match !key_size with
-            | "" -> let _ = Printf.printf "No symmetric key size specified, adapting to provided mechanism\n" in
+            | "" -> let _ = myPrintf "No symmetric key size specified, adapting to provided mechanism\n" in
                     let ks = 
                       (match !mech_string with
                        | ("AES" |"aes") -> 128n
@@ -617,7 +627,7 @@ let () =
                 let mech = match_string_to_sym_key_gen_mech_value !mech_string in 
                 let (ret_value, _) = Pkcs11.c_GenerateKey session_ {Pkcs11.mechanism = mech; Pkcs11.parameter = !provided_mech_params_array} templ_ in
                 let _ = check_ret ret_value C_GenerateKeyError false in
-                printf "C_GenerateKey ret: %s\n" (Pkcs11.match_cKR_value ret_value);
+                myPrintf "C_GenerateKey ret: %s\n" (Pkcs11.match_cKR_value ret_value);
               else
                 (* Else, we fail *)
                 failwith "Unsupported symmetric key generation mechanism, AES/DES/DES2/DES3 or custom provided mechanisms/templates only"
@@ -628,29 +638,21 @@ let () =
       begin
         let data = check_input_data input_data "Input data needs to be given to digest data" in
         let mech_type = (match !mech_string with
-            | "" -> Printf.printf "No specified mechanism, falling back to CKM_SHA1\n"; Pkcs11.cKM_SHA_1
+            | "" -> myPrintf "No specified mechanism, falling back to CKM_SHA1\n"; Pkcs11.cKM_SHA_1
             | _ -> Pkcs11.string_to_cKM_value !mech_string ) in
         let mech = { Pkcs11.mechanism = mech_type; Pkcs11.parameter = [||]} in
         let (digest_) = digest_some_data session_ mech data in
-        Pkcs11.print_hex_array digest_;
+        if (!do_quiet) = false then
+            Pkcs11.print_hex_array digest_;
         if (compare !output_data "" <> 0) then
         begin
-          Printf.printf "Writing data to %s\n" (!output_data);
+          myPrintf "Writing data to %s\n" (!output_data);
           write_file ~set_binary:true !output_data (Pkcs11.char_array_to_string digest_);
         end;
         ()
       end;
 
-    (* Sign some data *)
-    if (!do_sign) then
-      begin
-        let data = check_input_data input_data "Input data needs to be given to sign data" in
-        let mech_type = (match !mech_string with
-            | "" -> Printf.printf "No specified mechanism, falling back to CKM_RSA_PKCS\n"; Pkcs11.cKM_RSA_PKCS
-            | _ -> Pkcs11.string_to_cKM_value !mech_string ) in
-        let mech = { Pkcs11.mechanism = mech_type; Pkcs11.parameter = [||]} in
-        (* find a privkey to sign *)
-        let template = (
+    let initial_search_template = (
           if !object_label_given = true then
             [|{ Pkcs11.type_ =Pkcs11.cKA_LABEL ; Pkcs11.value = Pkcs11.string_to_char_array !object_label }|]
           else if !object_id_given = true then
@@ -658,6 +660,17 @@ let () =
           else
             [||]
         ) in
+
+    (* Sign some data *)
+    if (!do_sign) then
+      begin
+        let data = check_input_data input_data "Input data needs to be given to sign data" in
+        let mech_type = (match !mech_string with
+            | "" -> myPrintf "No specified mechanism, falling back to CKM_RSA_PKCS\n"; Pkcs11.cKM_RSA_PKCS
+            | _ -> Pkcs11.string_to_cKM_value !mech_string ) in
+        let mech = { Pkcs11.mechanism = mech_type; Pkcs11.parameter = [||]} in
+        (* find a privkey to sign *)
+        let template = initial_search_template in
         let template = templ_append template Pkcs11.cKA_CLASS (Pkcs11.int_to_ulong_char_array Pkcs11.cKO_PRIVATE_KEY) in
         let template = templ_append template Pkcs11.cKA_SIGN Pkcs11.true_ in
         let template = merge_templates template !provided_search_attributes_array in
@@ -666,11 +679,19 @@ let () =
         if (compare count_ 0n <> 0) then
         begin
           let (signed_) = sign_some_data session_ mech objects_.(0) data in
-          Printf.printf "Signed data (in hex): ";
-          Pkcs11.print_hex_array signed_;
+          myPrintf "Signed data (in hex): ";
+          if (!do_quiet) = false then
+            begin
+            Pkcs11.print_hex_array signed_;
+            end
+          else
+            begin
+            (* Here, print on stdout, expected on QUIET mode *)
+            Printf.printf "%s" (Pkcs11.char_array_to_string signed_);
+            end;
           if (compare !output_data "" <> 0) then
           begin
-            Printf.printf "Writing data to %s\n" (!output_data);
+            myPrintf "Writing data to %s\n" (!output_data);
             write_file ~set_binary:true !output_data (Pkcs11.char_array_to_string signed_);
           end;
           ()
@@ -685,18 +706,11 @@ let () =
         let data = check_input_data input_data "Input data needs to be given to verify data" in
         let data_verif = check_input_data data_to_verify "Signed input data needs to be given to verify signature" in
         let mech_type = (match !mech_string with
-            | "" -> Printf.printf "No specified mechanism, falling back to CKM_RSA_PKCS\n"; Pkcs11.cKM_RSA_PKCS
+            | "" -> myPrintf "No specified mechanism, falling back to CKM_RSA_PKCS\n"; Pkcs11.cKM_RSA_PKCS
             | _ -> Pkcs11.string_to_cKM_value !mech_string ) in
         let mech = { Pkcs11.mechanism = mech_type; Pkcs11.parameter = [||]} in
         (* find a pubkey to verify *)
-        let template = (
-          if !object_label_given = true then
-            [|{ Pkcs11.type_ =Pkcs11.cKA_LABEL ; Pkcs11.value = Pkcs11.string_to_char_array !object_label }|]
-          else if !object_id_given = true then
-            [|{ Pkcs11.type_ =Pkcs11.cKA_ID ; Pkcs11.value = Pkcs11.string_to_char_array !object_id }|]
-          else
-            [||]
-        ) in
+        let template = initial_search_template in
         let template = templ_append template Pkcs11.cKA_CLASS (Pkcs11.int_to_ulong_char_array Pkcs11.cKO_PUBLIC_KEY) in
         let template = templ_append template Pkcs11.cKA_VERIFY Pkcs11.true_ in
         let template = merge_templates template !provided_search_attributes_array in
@@ -704,7 +718,7 @@ let () =
         if (compare count_ 0n <> 0) then
         begin
           let verify_ = verify_some_data session_ mech objects_.(0) data data_verif in
-          printf "Verify operation returned : %s\n" (Pkcs11.match_cKR_value verify_);
+          myPrintf "Verify operation returned : %s\n" (Pkcs11.match_cKR_value verify_);
           ()
         end
         else
@@ -716,29 +730,30 @@ let () =
       begin
         let data = check_input_data input_data "Input data needs to be given to encrypt data" in
         let mech_type = (match !mech_string with
-            | "" -> Printf.printf "No specified mechanism, falling back to CKM_RSA_PKCS\n"; Pkcs11.cKM_RSA_PKCS
+            | "" -> myPrintf "No specified mechanism, falling back to CKM_RSA_PKCS\n"; Pkcs11.cKM_RSA_PKCS
             | _ -> Pkcs11.string_to_cKM_value !mech_string ) in
         let mech = { Pkcs11.mechanism = mech_type; Pkcs11.parameter = !provided_mech_params_array} in
         (* find a pubkey to encrypt *)
-        let template = (
-          if !object_label_given = true then
-            [|{ Pkcs11.type_ =Pkcs11.cKA_LABEL ; Pkcs11.value = Pkcs11.string_to_char_array !object_label }|]
-          else if !object_id_given = true then
-            [|{ Pkcs11.type_ =Pkcs11.cKA_ID ; Pkcs11.value = Pkcs11.string_to_char_array !object_id }|]
-          else
-            [||]
-        ) in
+        let template = initial_search_template in
         let template = templ_append template Pkcs11.cKA_ENCRYPT Pkcs11.true_ in
         let template = merge_templates template !provided_search_attributes_array in
         let (objects_, count_) =  find_objects session_ template !max_objects in
         if (compare count_ 0n <> 0) then
         begin
           let (encrypted_) = encrypt_some_data session_ mech objects_.(0) data in
-          Printf.printf "Encrypted data (in hex): ";
-          Pkcs11.print_hex_array encrypted_;
+          myPrintf "Encrypted data (in hex): ";
+          if (!do_quiet) = false then
+            begin
+            Pkcs11.print_hex_array encrypted_;
+            end
+          else
+            begin
+            (* Here, print on stdout, expected on QUIET mode *)
+            Printf.printf "%s" (Pkcs11.char_array_to_string encrypted_);
+            end;
           if (compare !output_data "" <> 0) then
           begin
-            Printf.printf "Writing data to %s\n" (!output_data);
+            myPrintf "Writing data to %s\n" (!output_data);
             write_file ~set_binary:true !output_data (Pkcs11.char_array_to_string encrypted_);
           end;
           ()
@@ -752,18 +767,11 @@ let () =
       begin
         let data = check_input_data input_data "Input data needs to be given to decrypt data" in
         let mech_type = (match !mech_string with
-            | "" -> Printf.printf "No specified mechanism, falling back to CKM_RSA_PKCS\n"; Pkcs11.cKM_RSA_PKCS
+            | "" -> myPrintf "No specified mechanism, falling back to CKM_RSA_PKCS\n"; Pkcs11.cKM_RSA_PKCS
             | _ -> Pkcs11.string_to_cKM_value !mech_string ) in
         let mech = { Pkcs11.mechanism = mech_type; Pkcs11.parameter = !provided_mech_params_array} in
         (* find a privkey to decrypt *)
-        let template = (
-          if !object_label_given = true then
-            [|{ Pkcs11.type_ =Pkcs11.cKA_LABEL ; Pkcs11.value = Pkcs11.string_to_char_array !object_label }|]
-          else if !object_id_given = true then
-            [|{ Pkcs11.type_ =Pkcs11.cKA_ID ; Pkcs11.value = Pkcs11.string_to_char_array !object_id }|]
-          else
-            [||]
-        ) in
+        let template = initial_search_template in
         let template = templ_append template Pkcs11.cKA_CLASS (Pkcs11.int_to_ulong_char_array Pkcs11.cKO_PRIVATE_KEY) in
         let template = templ_append template Pkcs11.cKA_DECRYPT Pkcs11.true_ in
         let template = merge_templates template !provided_search_attributes_array in
@@ -771,10 +779,18 @@ let () =
         if (compare count_ 0n <> 0) then
         begin
           let (decrypted_) = decrypt_some_data session_ mech objects_.(0) data in
-          Printf.printf "Decrypted data (in hex): ";
-          Pkcs11.print_hex_array decrypted_;
+          myPrintf "Decrypted data (in hex): ";
+          if (!do_quiet) = false then
+            begin
+            Pkcs11.print_hex_array decrypted_;
+            end
+          else
+            begin
+            (* Here, print on stdout, expected on QUIET mode *)
+            Printf.printf "%s" (Pkcs11.char_array_to_string decrypted_);
+            end;
           begin
-            Printf.printf "Writing data to %s\n" (!output_data);
+            myPrintf "Writing data to %s\n" (!output_data);
             write_file ~set_binary:true !output_data (Pkcs11.char_array_to_string decrypted_);
           end;
           ()
@@ -872,7 +888,7 @@ let () =
         dbg_print !do_verbose "C_OpenSession" ret_value;
 
         let mech_type = (match !mech_string with
-            | "" -> Printf.printf "No specified mechanism, falling back to CKM_RSA_PKCS\n"; Pkcs11.cKM_RSA_PKCS
+            | "" -> myPrintf "No specified mechanism, falling back to CKM_RSA_PKCS\n"; Pkcs11.cKM_RSA_PKCS
             | _ -> Pkcs11.string_to_cKM_value !mech_string ) in
         let mech = { Pkcs11.mechanism = mech_type; Pkcs11.parameter = !provided_mech_params_array} in
 
@@ -888,11 +904,19 @@ let () =
                 else
                     begin
                     let wrapped_key_ = wrap_key session_ mech wrapping_keys.(0) objects_.(0) in
-                    Printf.printf "Wrapped key (in hex): ";
-                    Pkcs11.print_hex_array wrapped_key_;
+                    myPrintf "Wrapped key (in hex): ";
+                    if (!do_quiet) = false then
+                        begin
+                        Pkcs11.print_hex_array wrapped_key_;
+                        end
+                    else
+                        begin
+                        (* Here, print on stdout, expected on QUIET mode *)
+                        Printf.printf "%s" (Pkcs11.char_array_to_string wrapped_key_);
+                        end;
                     if (compare !output_data "" <> 0) then
                       begin
-                        Printf.printf "Writing data to %s\n" (!output_data);
+                        myPrintf "Writing data to %s\n" (!output_data);
                         write_file ~set_binary:true !output_data (Pkcs11.char_array_to_string wrapped_key_);
                         ()
                       end;
@@ -910,7 +934,7 @@ let () =
 
         let data = check_input_data input_data "Input data needs to be given to unwrap key" in
         let mech_type = (match !mech_string with
-            | "" -> Printf.printf "No specified mechanism, falling back to CKM_RSA_PKCS\n"; Pkcs11.cKM_RSA_PKCS
+            | "" -> myPrintf "No specified mechanism, falling back to CKM_RSA_PKCS\n"; Pkcs11.cKM_RSA_PKCS
             | _ -> Pkcs11.string_to_cKM_value !mech_string ) in
         let mech = { Pkcs11.mechanism = mech_type; Pkcs11.parameter = !provided_mech_params_array} in
 
