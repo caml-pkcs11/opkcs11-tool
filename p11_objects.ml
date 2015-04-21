@@ -250,7 +250,6 @@ let match_string_to_keygenpair_mech_value in_string =
 | "CKM_DH_PKCS_KEY_PAIR_GEN" -> Pkcs11.cKM_DH_PKCS_KEY_PAIR_GEN
 | "CKM_X9_42_DH_KEY_PAIR_GEN" -> Pkcs11.cKM_X9_42_DH_KEY_PAIR_GEN
 | "CKM_KEA_KEY_PAIR_GEN" -> Pkcs11.cKM_KEA_KEY_PAIR_GEN
-| "CKM_ECDSA_KEY_PAIR_GEN" -> Pkcs11.cKM_ECDSA_KEY_PAIR_GEN
 | "CKM_EC_KEY_PAIR_GEN" -> Pkcs11.cKM_EC_KEY_PAIR_GEN
 | "CKM_VENDOR_DEFINED" -> Pkcs11.cKM_VENDOR_DEFINED
 | _ -> let s = Printf.sprintf "Unknown PKCS#11 key pair generation mechanism %s" in_string in failwith(s)
