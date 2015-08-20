@@ -32,6 +32,8 @@ Dependencies for a Debian/Ubuntu machine:
 Building:
 
     cd opkcs11-tool
+    ./autogen.sh
+    ./configure
     make
 
 ## Quickstart - Windows
