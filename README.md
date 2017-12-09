@@ -17,8 +17,8 @@ Example of CLI capabilities:
 
 ## Authors
 
-  * Ryad Benadjila (<mailto:ryad.benadjila@ssi.gouv.fr>)
-  * Thomas Calderon (<mailto:thomas.calderon@ssi.gouv.fr>)
+  * Ryad Benadjila (<mailto:ryadbenadjila@gmail.com>)
+  * Thomas Calderon (<mailto:calderon.thomas@gmail.com>)
 
 ## Quickstart - Linux
 Download the sources using GIT:
