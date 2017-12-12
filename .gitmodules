@@ -1,3 +1,3 @@
 [submodule "caml-crush"]
 	path = caml-crush
-	url = https://github.com/ANSSI-FR/caml-crush
+	url = https://github.com/caml-pkcs11/caml-crush
