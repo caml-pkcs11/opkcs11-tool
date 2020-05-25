@@ -23,7 +23,7 @@ Example of CLI capabilities:
 ## Quickstart - Linux
 Download the sources using GIT:
 
-    git clone --recursive git://github.com/ANSSI-FR/opkcs11-tool.git
+    git clone --recursive https://github.com/caml-pkcs11/opkcs11-tool
 
 Dependencies for a Debian/Ubuntu machine:
 
