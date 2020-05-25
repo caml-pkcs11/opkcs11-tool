@@ -21,19 +21,19 @@ build_bindings_standalone:
 	echo "Binding compilation done, cleanup up modified files, please note some file have been re-generated";
 ssl_parse:
 	$(CC) -g -fPIC -c  ssl_stubs.c -I@OCAMLLIB@
-	ocamlopt -pp "camlp4o pa_macro.cmo -DWITH_OCAML_SSL" -g -c ssl.mli ssl.ml
-	ocamlmklib -o myssl ssl.cmx ssl_stubs.o -cclib -L@OCAMLLIB@ -cclib -lcamlidl
+	ocamlopt @ocaml_options@ -pp "camlp4o pa_macro.cmo -DWITH_OCAML_SSL" -g -c ssl.mli ssl.ml
+	ocamlmklib @ocaml_options@ -o myssl ssl.cmx ssl_stubs.o -cclib -L@OCAMLLIB@ -cclib -lcamlidl
 
 opkcs11_tool_ssl: build_bindings_standalone ssl_parse
-	ocamlfind ocamlopt -pp "camlp4o pa_macro.cmo -DWITH_OCAML_SSL @need_custom_listiteri@" $(CFLAGS) -c ecc_helper.ml p11_common.ml p11_objects.ml p11_infos.ml p11_crypto.ml p11_templates.ml
+	ocamlfind ocamlopt @ocaml_options@ -pp "camlp4o pa_macro.cmo -DWITH_OCAML_SSL @need_custom_listiteri@" $(CFLAGS) -c ecc_helper.ml p11_common.ml p11_objects.ml p11_infos.ml p11_crypto.ml p11_templates.ml
 	ocamlfind ocamlopt $(CFLAGS) -c opkcs11_tool.ml
-	ocamlfind ocamlopt -linkpkg myssl.cmxa $(bindings_dir)/pkcs11_standalone.cmxa ecc_helper.cmx p11_common.cmx p11_objects.cmx p11_infos.cmx p11_crypto.cmx p11_templates.cmx opkcs11_tool.cmx $(LDFLAGS_C) -o $(opkcs11_binary)
+	ocamlfind ocamlopt @ocaml_options@ -linkpkg myssl.cmxa $(bindings_dir)/pkcs11_standalone.cmxa ecc_helper.cmx p11_common.cmx p11_objects.cmx p11_infos.cmx p11_crypto.cmx p11_templates.cmx opkcs11_tool.cmx $(LDFLAGS_C) -o $(opkcs11_binary)
 
 opkcs11_tool_standalone:
-	cd $(x509_dir) && ocamlopt -pp "camlp4o pa_macro.cmo -DWITH_OCAML_X509 @need_custom_listiteri@" -c helpers.ml oids.ml asn1.ml pkcs1_8.ml x509.ml && cd -
-	ocamlfind ocamlopt -pp "camlp4o pa_macro.cmo -DWITH_OCAML_X509 @need_custom_listiteri@" $(CFLAGS) -I $(x509_dir) -c ecc_helper.ml p11_common.ml ssl.mli ssl.ml p11_objects.ml p11_infos.ml p11_crypto.ml p11_templates.ml
-	ocamlfind ocamlopt $(CFLAGS) -c opkcs11_tool.ml
-	ocamlfind ocamlopt -linkpkg $(bindings_dir)/pkcs11_standalone.cmxa $(x509_dir)/helpers.cmx $(x509_dir)/oids.cmx $(x509_dir)/asn1.cmx $(x509_dir)/pkcs1_8.cmx $(x509_dir)/x509.cmx ecc_helper.cmx p11_common.cmx ssl.cmx p11_objects.cmx p11_infos.cmx p11_crypto.cmx p11_templates.cmx opkcs11_tool.cmx $(LDFLAGS_STANDALONE) -o $(opkcs11_binary)
+	cd $(x509_dir) && ocamlopt @ocaml_options@ -pp "camlp4o pa_macro.cmo -DWITH_OCAML_X509 @need_custom_listiteri@" -c helpers.ml oids.ml asn1.ml pkcs1_8.ml x509.ml && cd -
+	ocamlfind ocamlopt @ocaml_options@ -pp "camlp4o pa_macro.cmo -DWITH_OCAML_X509 @need_custom_listiteri@" $(CFLAGS) -I $(x509_dir) -c ecc_helper.ml p11_common.ml ssl.mli ssl.ml p11_objects.ml p11_infos.ml p11_crypto.ml p11_templates.ml
+	ocamlfind ocamlopt @ocaml_options@ $(CFLAGS) -c opkcs11_tool.ml
+	ocamlfind ocamlopt @ocaml_options@ -linkpkg $(bindings_dir)/pkcs11_standalone.cmxa $(x509_dir)/helpers.cmx $(x509_dir)/oids.cmx $(x509_dir)/asn1.cmx $(x509_dir)/pkcs1_8.cmx $(x509_dir)/x509.cmx ecc_helper.cmx p11_common.cmx ssl.cmx p11_objects.cmx p11_infos.cmx p11_crypto.cmx p11_templates.cmx opkcs11_tool.cmx $(LDFLAGS_STANDALONE) -o $(opkcs11_binary)
 
 install:
 	echo "Installing $(opkcs11_binary) to ${prefix}/bin/$(opkcs11_binary)"
