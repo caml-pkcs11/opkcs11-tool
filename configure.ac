@@ -101,7 +101,7 @@ fi
 
 # Handle the deprecated immutable String and adapt ocaml
 # compilation flag
-AX_COMPARE_VERSION([$OCAMLVERSION], [lt], [4.00.0], [use_unsafe_strings=no], [use_unsafe_strings=yes])
+AX_COMPARE_VERSION([$OCAMLVERSION], [lt], [4.02.0], [use_unsafe_strings=no], [use_unsafe_strings=yes])
 if test "$use_unsafe_strings" == "yes"
 then
         AC_SUBST(ocaml_options, "-unsafe-string")
