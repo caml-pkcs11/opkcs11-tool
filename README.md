@@ -1,4 +1,5 @@
 # opkcs11-tool
+[![Build Status](https://travis-ci.com/caml-pkcs11/caml-crush.svg?branch=master)](https://travis-ci.com/caml-pkcs11/opkcs11-tool)
 
 This software is a computer program whose purpose is to offer CLI capabilities
 to administer and use PKCS\#11 devices.
