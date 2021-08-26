@@ -101,13 +101,18 @@ fi
 
 # Handle the deprecated immutable String and adapt ocaml
 # compilation flag
-AX_COMPARE_VERSION([$OCAMLVERSION], [lt], [4.02.0], [use_unsafe_strings=no], [use_unsafe_strings=yes])
-if test "$use_unsafe_strings" == "yes"
+# Handle the Byte package that is not present for OCaml < 4.02.0
+AX_COMPARE_VERSION([$OCAMLVERSION], [lt], [4.02.0], [bytes_module_present=no], [bytes_module_present=yes])
+if test "$bytes_module_present" == "no"
 then
-        AC_SUBST(ocaml_options, "-unsafe-string")
+        AC_SUBST(ocaml_bytes_module_define, "-DOCAML_NO_BYTES_MODULE")
+        AC_SUBST(ocaml_options, "")
 else
+        AC_SUBST(ocaml_bytes_module_define, "")
         AC_SUBST(ocaml_options, "")
 fi
+
+AC_SUBST(ocaml_options, "")
 
 AC_OUTPUT(Makefile)
 

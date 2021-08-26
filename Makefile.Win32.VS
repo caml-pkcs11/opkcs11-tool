@@ -28,6 +28,6 @@ clean:
 #Compile and link
 $(OPKCS11TOOL).opt: $(PKCS11_OBJ)
 	cd $(x509_dir) && ocamlopt -c helpers.ml oids.ml asn1.ml pkcs1_8.ml x509.ml && cd ..
-	ocamlopt @ocaml_options@ -pp "camlp4o pa_macro.cmo -DWIN32 -DWITH_OCAML_X509" -I $(bindings_dir) -I $(x509_dir) -c ecc_helper.ml p11_common.ml ssl.mli ssl.ml p11_objects.ml p11_infos.ml p11_crypto.ml p11_templates.ml
-	ocamlopt @ocaml_options@ -I $(bindings_dir) -c opkcs11_tool.ml
+	ocamlopt @ocaml_options@ -pp "camlp4o pa_macro.cmo @ocaml_bytes_module_define@ -DWIN32 -DWITH_OCAML_X509" -I $(bindings_dir) -I $(x509_dir) -c ecc_helper.ml p11_common.ml ssl.mli ssl.ml p11_objects.ml p11_infos.ml p11_crypto.ml p11_templates.ml
+	ocamlopt @ocaml_options@ -pp "camlp4o pa_macro.cmo @ocaml_bytes_module_define@ -DWIN32 -DWITH_OCAML_X509" -I $(bindings_dir) -c opkcs11_tool.ml
 	ocamlopt @ocaml_options@ $(CAML_INC)\str.cmxa $(bindings_dir)\libpkcs11_standalone.lib $(bindings_dir)\pkcs11_standalone.cmxa $(x509_dir)\helpers.cmx $(x509_dir)\oids.cmx $(x509_dir)\asn1.cmx $(x509_dir)\pkcs1_8.cmx $(x509_dir)\x509.cmx ecc_helper.cmx p11_common.cmx ssl.cmx p11_objects.cmx p11_infos.cmx p11_crypto.cmx p11_templates.cmx opkcs11_tool.cmx $(LDFLAGS_STANDALONE) -o $(OPKCS11TOOL).exe
