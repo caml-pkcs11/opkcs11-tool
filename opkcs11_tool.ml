@@ -60,11 +60,20 @@ let read_password msg =
   myPrintf "\n";
   (password)
 
+IFDEF OCAML_NO_BYTES_MODULE THEN
+let my_read_file my_data =
+    read_file ~set_binary:true my_data
+ENDIF
+IFNDEF OCAML_NO_BYTES_MODULE THEN
+let my_read_file my_data =
+    (Bytes.to_string (read_file ~set_binary:true my_data))
+ENDIF
+
 let check_input_data my_data message =
     let data = (match !my_data with
          | "" -> failwith message
          | "-" -> input_line stdin
-         | _ -> read_file ~set_binary:true !my_data) in
+         | _ -> my_read_file !my_data) in
     data
 
 let speclist = [
@@ -813,7 +822,7 @@ let () =
                   failwith "Input data or a non empty creation template needs to be specified for object creation"
                 else
                   ("")
-            | _ -> (read_file ~set_binary:true !input_data)
+            | _ -> (my_read_file !input_data)
         ) in
         let label = (match !object_label_given with
             false -> None

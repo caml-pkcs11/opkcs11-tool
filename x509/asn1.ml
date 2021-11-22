@@ -2,6 +2,10 @@
 (* WARNING: this is a beta version    *)
 (* Improvement and fixes are expected *)
 
+IFDEF OCAML_NO_BYTES_MODULE THEN
+module Bytes = String
+ENDIF
+
 (* Exceptions *)
 exception ASN1_Bad_tag_num of int
 exception ASN1_Bad_tag_class of int
@@ -556,6 +560,7 @@ let get_string_from_encoded_string pos verbosity tag_type asn1_content =
     let _ = (if verbosity = true then Printf.printf "WARNING: detected obsolete string encoding at position %d\n" pos else ()) in
       (asn1_content)
 
+IFDEF OCAML_NO_BYTES_MODULE THEN
 let get_bitstring_from_string pos verbosity tag_type asn1_content =
   match tag_type with
     | Bitstring ->
@@ -564,7 +569,7 @@ let get_bitstring_from_string pos verbosity tag_type asn1_content =
       else
         (* Get the bit mask of the last byte *)
         let mask_low = (Char.code asn1_content.[0])  in
-        let mask_high = (lnot mask_low) land 0xff in       
+        let mask_high = (lnot mask_low) land 0xff in
         if mask_high = 0xff then
           (* We keep all the bits of the last byte *)
           (String.sub asn1_content 1 (String.length asn1_content - 1))
@@ -573,13 +578,41 @@ let get_bitstring_from_string pos verbosity tag_type asn1_content =
           (* Shift right the string with the appropriate amount of bits *)
           let numbits = Helpers.find_bits_number (String.make 1 (Char.chr mask_low)) in
           let output = String.make (String.length asn1_content - 1) (Char.chr 0x0) in
-          let old_byte = ref 0x0 in 
+          let old_byte = ref 0x0 in
           for i = 1 to (String.length asn1_content - 1) do
-            output.[i] <- Char.chr (((Char.code asn1_content.[i]) lsr numbits) lxor !old_byte);
+            String.set output i (Char.chr (((Char.code asn1_content.[i]) lsr numbits) lxor !old_byte));
             old_byte := (((Char.code asn1_content.[i]) land mask_high) lsl (7-numbits)) land 0xff;
           done;
-          (output) 
+          (output)
     | _ -> failwith "Bitstring to string conversion: bad tag type"
+ENDIF
+
+IFNDEF OCAML_NO_BYTES_MODULE THEN
+let get_bitstring_from_string pos verbosity tag_type asn1_content =
+  match tag_type with
+    | Bitstring ->
+      if (String.length asn1_content) < 2 then
+        failwith "Bitstring to string conversion: string length must be > 1"
+      else
+        (* Get the bit mask of the last byte *)
+        let mask_low = (Char.code asn1_content.[0])  in
+        let mask_high = (lnot mask_low) land 0xff in
+        if mask_high = 0xff then
+          (* We keep all the bits of the last byte *)
+          (String.sub asn1_content 1 (String.length asn1_content - 1))
+        else
+          (* We keep a strict subset of the last byte *)
+          (* Shift right the string with the appropriate amount of bits *)
+          let numbits = Helpers.find_bits_number (String.make 1 (Char.chr mask_low)) in
+          let output = Bytes.make (String.length asn1_content - 1) (Char.chr 0x0) in
+          let old_byte = ref 0x0 in
+          for i = 1 to (String.length asn1_content - 1) do
+            Bytes.set output i (Char.chr (((Char.code asn1_content.[i]) lsr numbits) lxor !old_byte));
+            old_byte := (((Char.code asn1_content.[i]) land mask_high) lsl (7-numbits)) land 0xff;
+          done;
+          (Bytes.to_string output)
+    | _ -> failwith "Bitstring to string conversion: bad tag type"
+ENDIF
 
 let get_octetstring_from_string pos verbosity tag_type asn1_content =
   match tag_type with
@@ -1457,6 +1490,7 @@ let asn1_info_from_constructed_type the_type =
     (* Empty node *)
     | None_C -> (Null, "None", Primitive, Universal, 0x0, "", None)
 
+IFDEF OCAML_NO_BYTES_MODULE THEN
 (* Transform a given length to a big endian string *)
 let int_to_big_endian_string in_int =
   (* We only handle length encoded on 4 bytes maximum *)
@@ -1473,11 +1507,36 @@ let int_to_big_endian_string in_int =
         else 
           (4)
   ) in
-  let out_string = ref (String.create num_of_bytes) in
+  let out_string = ref (Bytes.create num_of_bytes) in
   for i=0 to (num_of_bytes-1) do
     !out_string.[i] <- Char.chr ((in_int lsr (8*(num_of_bytes - 1 - i))) land 0xff);
   done;
   (!out_string)
+ENDIF
+IFNDEF OCAML_NO_BYTES_MODULE THEN
+(* Transform a given length to a big endian string *)
+let int_to_big_endian_string in_int =
+  (* We only handle length encoded on 4 bytes maximum *)
+  (* Compute the number of bytes needed *)
+  let num_of_bytes = (
+    if in_int < 256 then
+      (1)
+    else
+      if in_int < 65536 then
+        (2)
+      else
+        if in_int < 16777216 then
+          (3)
+        else 
+          (4)
+  ) in
+  let out_string = ref (Bytes.create num_of_bytes) in
+  for i=0 to (num_of_bytes-1) do
+    Bytes.set !out_string i (Char.chr ((in_int lsr (8*(num_of_bytes - 1 - i))) land 0xff));
+  done;
+  (Bytes.to_string !out_string)
+ENDIF
+
 
 (* Build an ASN1 block at first level given its type and its content *)
 let asn1_build_block asn1_type given_tag = 
@@ -1679,12 +1738,12 @@ let oid_value_to_asn1_string oid_value tag_type =
        (get_string_from_oid oid_value)
     |_ -> raise(ASN1_Construct_Error("ASN1 construct OID helper: trying to construct a string from a non OID or Relative_OID tag"))
 
-
+IFDEF OCAML_NO_BYTES_MODULE THEN
 (* Helper for ASN1 bitstring and octetstring *)
-let bitstring_to_asn1_string bitstring length tag_type = 
+let bitstring_to_asn1_string bitstring length tag_type =
   match tag_type with
      Bitstring ->
-       if length > (8*(String.length bitstring)) then          
+       if length > (8*(String.length bitstring)) then
          let s = Printf.sprintf "ASN1 construct Bitstring helper: bad Bitstring length %d while the bytes length is %d" length (8*(String.length bitstring)) in
          raise(ASN1_Construct_Error(s))
        else
@@ -1731,6 +1790,60 @@ let represented_bitstring_to_packed_bitstring input =
     !out_string.[i/8] <- Char.chr ((Char.code !out_string.[i/8]) lxor (bit lsl (7-(i mod 8))));
   done;
   (!out_string)
+ENDIF
+IFNDEF OCAML_NO_BYTES_MODULE THEN
+(* Helper for ASN1 bitstring and octetstring *)
+let bitstring_to_asn1_string bitstring length tag_type =
+  match tag_type with
+     Bitstring ->
+       if length > (8*(String.length bitstring)) then
+         let s = Printf.sprintf "ASN1 construct Bitstring helper: bad Bitstring length %d while the bytes length is %d" length (8*(String.length bitstring)) in
+         raise(ASN1_Construct_Error(s))
+       else
+         let real_length = (
+           if (length mod 8) = 0 then
+             (length/8)
+           else
+             ((length/8)+1)
+         ) in
+         let new_string = ref (Bytes.of_string (String.sub bitstring 0 real_length)) in
+         (* Check the length and get the number of padding bits *)
+         let padding_bits_num = (8 - (length mod 8)) mod 8 in
+         let padding_mask = ref 0 in
+         for i = 7 downto padding_bits_num do
+           padding_mask := !padding_mask lxor (0x1 lsl i);
+         done;
+         (* Pad the last byte of the string *)
+         Bytes.set !new_string (Bytes.length !new_string - 1) (Char.chr ((Char.code (Bytes.get !new_string (Bytes.length !new_string - 1))) land !padding_mask));
+         new_string := Bytes.cat (Bytes.make 1 (Char.chr padding_bits_num)) !new_string;
+         (Bytes.to_string !new_string)
+    |_ -> raise(ASN1_Construct_Error("ASN1 construct Bitstring helper: trying to construct a string from a non Bitstring tag"))
+
+let represented_bitstring_to_packed_bitstring input =
+  (* Compute the target length *)
+  let length = (
+    if (String.length input) mod 8 = 0 then
+      ((String.length input)/8)
+    else
+      (((String.length input)/8)+1)
+  ) in
+  let out_string = ref (Bytes.of_string (String.make length (Char.chr 0))) in
+  (* Parse the given bitstring and pack it *)
+  for i = 0 to (String.length input - 1) do
+    let bit = (
+      if input.[i] = '1' then
+        (0x1)
+      else
+        if input.[i] = '0' then
+          (0x0)
+        else
+          let s = Printf.sprintf "ASN1 construct Bitstring helper: given character %c is not a bit (must be either 0 or 1)" input.[i] in
+          raise(ASN1_Construct_Error(s))
+    ) in
+    Bytes.set !out_string (i/8) (Char.chr ((Char.code (Bytes.get !out_string (i/8))) lxor (bit lsl (7-(i mod 8)))));
+  done;
+  (Bytes.to_string !out_string)
+ENDIF
 
 (* Date and time creation helpers *)
 let time_to_asn1_string the_time tag_type = 

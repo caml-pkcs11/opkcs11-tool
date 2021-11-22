@@ -3,7 +3,7 @@ MAKEPROG = @MAKEPROG@
 caml_crush_dir = @caml_crush_src@
 bindings_dir = $(caml_crush_dir)/src/bindings-pkcs11
 x509_dir=./x509/
-CFLAGS = -I $(bindings_dir) 
+CFLAGS = -g -I $(bindings_dir) 
 LDFLAGS_C = -package "str,unix" -cclib -lcamlidl -cclib -L$(bindings_dir) -cclib -L./ -cclib -lmyssl -cclib -lssl -cclib -lcrypto
 LDFLAGS_STANDALONE= -package "str,unix" -cclib -lcamlidl -cclib -L$(bindings_dir) -cclib -L./
 opkcs11_binary=opkcs11-tool
@@ -20,19 +20,19 @@ build_bindings_standalone:
 	$(MAKEPROG) -f Makefile.standalone;
 	echo "Binding compilation done, cleanup up modified files, please note some file have been re-generated";
 ssl_parse:
-	$(CC) -g -fPIC -c  ssl_stubs.c -I@OCAMLLIB@
-	ocamlopt @ocaml_options@ -pp "camlp4o pa_macro.cmo -DWITH_OCAML_SSL" -g -c ssl.mli ssl.ml
+	$(CC) -g -fPIC -g -c  ssl_stubs.c -I@OCAMLLIB@
+	ocamlopt @ocaml_options@ -pp "camlp4o pa_macro.cmo @ocaml_bytes_module_define@ -DWITH_OCAML_SSL" -g -g -c ssl.mli ssl.ml
 	ocamlmklib -o myssl ssl.cmx ssl_stubs.o -cclib -L@OCAMLLIB@ -cclib -lcamlidl
 
 opkcs11_tool_ssl: build_bindings_standalone ssl_parse
-	ocamlfind ocamlopt @ocaml_options@ -pp "camlp4o pa_macro.cmo -DWITH_OCAML_SSL @need_custom_listiteri@" $(CFLAGS) -c ecc_helper.ml p11_common.ml p11_objects.ml p11_infos.ml p11_crypto.ml p11_templates.ml
-	ocamlfind ocamlopt @ocaml_options@ $(CFLAGS) -c opkcs11_tool.ml
+	ocamlfind ocamlopt @ocaml_options@ -pp "camlp4o pa_macro.cmo @ocaml_bytes_module_define@ -DWITH_OCAML_SSL @need_custom_listiteri@" $(CFLAGS) -g -c ecc_helper.ml p11_common.ml p11_objects.ml p11_infos.ml p11_crypto.ml p11_templates.ml
+	ocamlfind ocamlopt @ocaml_options@ -pp "camlp4o pa_macro.cmo @ocaml_bytes_module_define@ -DWITH_OCAML_SSL @need_custom_listiteri@" $(CFLAGS) -g -c opkcs11_tool.ml
 	ocamlfind ocamlopt @ocaml_options@ -linkpkg myssl.cmxa $(bindings_dir)/pkcs11_standalone.cmxa ecc_helper.cmx p11_common.cmx p11_objects.cmx p11_infos.cmx p11_crypto.cmx p11_templates.cmx opkcs11_tool.cmx $(LDFLAGS_C) -o $(opkcs11_binary)
 
 opkcs11_tool_standalone:
-	cd $(x509_dir) && ocamlopt @ocaml_options@ -pp "camlp4o pa_macro.cmo -DWITH_OCAML_X509 @need_custom_listiteri@" -c helpers.ml oids.ml asn1.ml pkcs1_8.ml x509.ml && cd -
-	ocamlfind ocamlopt @ocaml_options@ -pp "camlp4o pa_macro.cmo -DWITH_OCAML_X509 @need_custom_listiteri@" $(CFLAGS) -I $(x509_dir) -c ecc_helper.ml p11_common.ml ssl.mli ssl.ml p11_objects.ml p11_infos.ml p11_crypto.ml p11_templates.ml
-	ocamlfind ocamlopt @ocaml_options@ $(CFLAGS) -c opkcs11_tool.ml
+	cd $(x509_dir) && ocamlopt @ocaml_options@ -pp "camlp4o pa_macro.cmo @ocaml_bytes_module_define@ -DWITH_OCAML_X509 @need_custom_listiteri@" -g -c helpers.ml oids.ml asn1.ml pkcs1_8.ml x509.ml && cd -
+	ocamlfind ocamlopt @ocaml_options@ -pp "camlp4o pa_macro.cmo @ocaml_bytes_module_define@ -DWITH_OCAML_X509 @need_custom_listiteri@" $(CFLAGS) -I $(x509_dir) -g -c ecc_helper.ml p11_common.ml ssl.mli ssl.ml p11_objects.ml p11_infos.ml p11_crypto.ml p11_templates.ml
+	ocamlfind ocamlopt @ocaml_options@ -pp "camlp4o pa_macro.cmo @ocaml_bytes_module_define@ -DWITH_OCAML_X509 @need_custom_listiteri@" $(CFLAGS) -g -c opkcs11_tool.ml
 	ocamlfind ocamlopt @ocaml_options@ -linkpkg $(bindings_dir)/pkcs11_standalone.cmxa $(x509_dir)/helpers.cmx $(x509_dir)/oids.cmx $(x509_dir)/asn1.cmx $(x509_dir)/pkcs1_8.cmx $(x509_dir)/x509.cmx ecc_helper.cmx p11_common.cmx ssl.cmx p11_objects.cmx p11_infos.cmx p11_crypto.cmx p11_templates.cmx opkcs11_tool.cmx $(LDFLAGS_STANDALONE) -o $(opkcs11_binary)
 
 install:

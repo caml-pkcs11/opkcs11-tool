@@ -50,12 +50,13 @@ IFDEF WITH_OCAML_X509 THEN
 (* No need to init the openssl library here *)
 let init _ = ()
 
+IFDEF OCAML_NO_BYTES_MODULE THEN
 (* Read a certificate from a path *)
 let read_certificate cert_path =
   let in_der = P11_common.read_file ~set_binary:true cert_path in
   (* Get a parsed x509 object *)
   let decoded_asn1 = (try Asn1.decode_ber 0 in_der false false
-    with _ -> 
+    with _ ->
       let s = Printf.sprintf "X509 (ASN1) parse error when reading %s\n" cert_path in
       raise(X509.X509_ASN1_parse_error s)) in
   let (check_x509, x509) = Asn1.check_asn1_scheme decoded_asn1 X509.x509_certificate_asn1_scheme in
@@ -63,9 +64,28 @@ let read_certificate cert_path =
     (* We have an x509, return it *)
     (x509)
   else
-    (* Not an x509, raise an error *)    
+    (* Not an x509, raise an error *)
     let s = Printf.sprintf "X509 parse error when reading %s (valid ASN1 but not an X509)\n" cert_path in
     raise(X509.X509_ASN1_parse_error s)
+ENDIF
+IFNDEF OCAML_NO_BYTES_MODULE THEN
+(* Read a certificate from a path *)
+let read_certificate cert_path =
+  let in_der = P11_common.read_file ~set_binary:true cert_path in
+  (* Get a parsed x509 object *)
+  let decoded_asn1 = (try Asn1.decode_ber 0 (Bytes.to_string in_der) false false
+    with _ ->
+      let s = Printf.sprintf "X509 (ASN1) parse error when reading %s\n" cert_path in
+      raise(X509.X509_ASN1_parse_error s)) in
+  let (check_x509, x509) = Asn1.check_asn1_scheme decoded_asn1 X509.x509_certificate_asn1_scheme in
+  if check_x509 = true then
+    (* We have an x509, return it *)
+    (x509)
+  else
+    (* Not an x509, raise an error *)
+    let s = Printf.sprintf "X509 parse error when reading %s (valid ASN1 but not an X509)\n" cert_path in
+    raise(X509.X509_ASN1_parse_error s)
+ENDIF
 
 (* Get the subject ASN1 value from an X509 certificate *)
 let get_subject_asn1 cert =

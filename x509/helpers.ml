@@ -2,6 +2,9 @@
 (* WARNING: this is a beta version    *)
 (* Improvement and fixes are expected *)
 
+IFDEF OCAML_NO_BYTES_MODULE THEN
+module Bytes = String
+ENDIF
 
 (** Generic function to get the value of an option **)
 let get = function
@@ -82,30 +85,30 @@ let merge_nibbles niba nibb =
 let pack hexstr =
      let len = String.length hexstr in
      let half_len = len / 2 in
-     let res = String.create half_len in
+     let res = Bytes.create half_len in
      let j = ref 0 in
      for i = 0 to len - 2 do
         if (i mod 2 == 0) then
           (
           let tmp = merge_nibbles hexstr.[i] hexstr.[i+1] in
-          res.[!j] <- tmp;
+          Bytes.set res !j tmp;
           j := !j +1;
           )
      done;
      (res)
 
-let char_array_to_string = fun a -> let s = String.create (Array.length a) in
-  Array.iteri (fun i x -> String.set s i x) a; s;;
+let char_array_to_string = fun a -> let s = Bytes.create (Array.length a) in
+  Array.iteri (fun i x -> Bytes.set s i x) a; s;;
 
 let string_to_char_array = fun s -> Array.init (String.length s) (fun i -> s.[i]);;
 
 (* Ocaml version <4.00.1 does not include List.iteri, provide it*)
 IFDEF NEED_CUSTOM_LISTITERI THEN
-let char_list_to_string = fun a -> let s = String.create (List.length a) in
-  iteri (fun i x -> String.set s i x) a; s;;
+let char_list_to_string = fun a -> let s = Bytes.create (List.length a) in
+  iteri (fun i x -> Bytes.set s i x) a; s;;
 ELSE
-let char_list_to_string = fun a -> let s = String.create (List.length a) in
-  List.iteri (fun i x -> String.set s i x) a; s;;
+let char_list_to_string = fun a -> let s = Bytes.create (List.length a) in
+  List.iteri (fun i x -> Bytes.set s i x) a; s;;
 ENDIF
 
 let string_to_char_list = fun s -> Array.to_list (string_to_char_array s);;

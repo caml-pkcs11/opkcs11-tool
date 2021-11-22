@@ -163,6 +163,7 @@ let dbg_print debug fun_name ret =
     printf "%s: returned %s\n" fun_name (Pkcs11.match_cKR_value ret);
   ()
 
+IFDEF OCAML_NO_BYTES_MODULE THEN
 let read_file ?set_binary:(bin=false) f =
   let ic = open_in f in
   set_binary_mode_in ic bin;
@@ -171,6 +172,18 @@ let read_file ?set_binary:(bin=false) f =
   really_input ic s 0 n;
   close_in ic;
   (s)
+ENDIF
+IFNDEF OCAML_NO_BYTES_MODULE THEN
+let read_file ?set_binary:(bin=false) f =
+  let ic = open_in f in
+  set_binary_mode_in ic bin;
+  let n = in_channel_length ic in
+  let s = Bytes.create n in
+  really_input ic s 0 n;
+  close_in ic;
+  (s)
+ENDIF
+
 
 let write_file ?set_binary:(bin=false) f out_string =
   let oc = open_out f in
